@@ -190,7 +190,7 @@ func candidatesFor(repo model.Repo, prefix string) []Candidate {
 	// environment creates it with no protection rules.
 	var gated []string
 	for _, e := range repo.Environments {
-		if EnvironmentGated(e, protectedBranches) {
+		if EnvironmentGated(e, protectedBranches, repo.WeakProtected) {
 			gated = append(gated, e.Name)
 		}
 	}
@@ -274,13 +274,17 @@ func ExternalCandidate() Candidate {
 
 // EnvironmentGated reports whether an attacker with write access cannot run
 // a job in environment e unaided.
-func EnvironmentGated(e model.Environment, protectedBranches []string) bool {
+//
+// "Protected branches only" gates an environment only when every branch
+// GitHub considers protected really needs a review to change; a weakly
+// protected branch can be merged into by the attacker.
+func EnvironmentGated(e model.Environment, protectedBranches []string, weak []string) bool {
 	if e.RequiredReviewers {
 		return true
 	}
 	switch e.BranchPolicy {
 	case model.BranchPolicyProtected:
-		return true
+		return len(weak) == 0
 	case model.BranchPolicyCustom:
 		for _, p := range e.BranchPatterns {
 			if glob.HasWildcard(p) {

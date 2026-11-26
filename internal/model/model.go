@@ -90,10 +90,15 @@ type Repo struct {
 	// needing review instead of not reachable.
 	OIDCSubTemplateUnknown bool `json:"oidc_sub_template_unknown,omitempty"`
 
-	// ProtectedBranches are branches an attacker with write access cannot
-	// push to (classic protection or rulesets). Empty when unknown, which
-	// analysis treats conservatively as "nothing is protected".
+	// ProtectedBranches are branches a write credential cannot change on its
+	// own: GitHub confirmed that merging needs at least one approving review
+	// (ruleset or classic protection). Empty when unknown, which analysis
+	// treats conservatively as "nothing is protected".
 	ProtectedBranches []string `json:"protected_branches,omitempty"`
+	// WeakProtected are branches GitHub marks protected where an approving
+	// review is not required, or could not be confirmed. A write credential
+	// can merge its own change into them.
+	WeakProtected []string `json:"weakly_protected_branches,omitempty"`
 
 	// Hunting telemetry (optional).
 	Branches     []string      `json:"branches,omitempty"`

@@ -16,7 +16,7 @@ With write access, an attacker can:
 
 The attacker **cannot**:
 
-- push to protected branches;
+- change a branch whose ruleset or branch protection requires at least one approving review before merging. A branch that is "protected" only by status checks, or whose protection cannot be read, is treated as changeable (WM020);
 - run a job in an environment with required reviewers;
 - run a job in an environment restricted to protected branches.
 
@@ -61,7 +61,7 @@ When Wardmap is unsure, it errs towards reporting exposure. It never errs toward
 | Trust condition, operator or CEL it cannot evaluate | *needs review*, **high** (WM014). Never "not reachable". |
 | Trust policy that cannot be parsed | WM014, **high** |
 | Repository's custom OIDC subject template not readable | Recorded as a gap. Any trust that mentions the repository is WM014 **high**. |
-| Branch protection unknown | Every branch is treated as pushable |
+| Branch protection unknown, or protected without a required review | The branch is treated as changeable by a write credential. Environments limited to protected branches are then treated as ungated. |
 | Environments unreadable | Every environment is treated as ungated |
 | Any GitHub data not readable (permissions, errors) | Collection gap (WM016), shown at the top of the report. `--fail-on-gaps` (Action: `fail-on-gaps`) turns it into a failing exit code. |
 | Pagination limit reached | An error (listing repositories) or a gap (everything else), never a silent truncation |
@@ -73,7 +73,7 @@ The AWS policy evaluator, the GCP CEL evaluator, the glob engine and the workflo
 
 ## Known limitations
 
-- Branch protection uses the branches API `protected` flag. Rulesets that restrict branch *creation* are not modelled. If anything this produces extra findings, never fewer.
+- Branch protection counts only when an active ruleset (rules API) or classic protection requires at least one approving review, or restricts updates. Reading classic protection details needs Administration: read; without it the branch is treated as weak. Rulesets that restrict branch *creation*, and bypass lists, are not modelled. These can only add findings, never remove them.
 - GCP: service-account impersonation bindings are not evaluated.
 - Reusable workflows called from other repositories are not followed.
 - Self-hosted runners and persistence on runners are out of scope. Use runtime tooling for those.

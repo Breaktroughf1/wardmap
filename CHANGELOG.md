@@ -12,6 +12,12 @@ GitHub's default `sub` claim includes immutable IDs (`repo:OWNER@ID/REPO@ID:…`
 
 **Upgrading is strongly recommended.**
 
+### Fixed: branch protection that does not stop a write credential (false negative)
+
+Earlier versions trusted GitHub's `protected` flag. That flag is also set when a branch only requires status checks, and an attacker with write access can open a pull request and merge it into such a branch. A branch now counts as protected only when an active ruleset or classic protection requires at least one approving review, or restricts updates. If that cannot be confirmed, Wardmap treats the branch as weak (fail safe).
+
+As a result, trust scoped to a weakly protected branch is reported as reachable, and "protected branches only" environments are treated as ungated when any protected branch is weak. New rule WM020 reports default branches that are unprotected or weakly protected.
+
 Wardmap is now installable from every common channel, each delivering the same signed binary.
 
 - **Release archives** are built reproducibly with GoReleaser: tar.gz for Linux and macOS, zip for Windows, amd64 and arm64, plus a source archive. `checksums.txt` carries a keyless Sigstore signature (`checksums.txt.sigstore.json`), and the archives keep SLSA build provenance. Archive names change from `wardmap_vX.Y.Z_<os>_<arch>` (raw binaries) to `wardmap_X.Y.Z_<os>_<arch>.tar.gz` / `.zip`.

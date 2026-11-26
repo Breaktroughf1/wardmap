@@ -218,7 +218,7 @@ func (a *analyzer) secretReach() {
 			ungated = append(ungated, "org/"+n)
 		}
 		for _, e := range r.Environments {
-			gated := oidc.EnvironmentGated(e, r.ProtectedBranches)
+			gated := oidc.EnvironmentGated(e, r.ProtectedBranches, r.WeakProtected)
 			for _, sec := range e.Secrets {
 				ed := Edge{From: actor, To: "secret:" + r.FullName + "/env/" + e.Name + "/" + sec.Name, Kind: "secret", Via: "environment " + e.Name}
 				if gated {
@@ -240,11 +240,43 @@ func (a *analyzer) secretReach() {
 			a.add("WM002", Medium, r.FullName, "", r.FullName,
 				fmt.Sprintf("%d secret(s) are readable from any branch of %s by anyone with write access (the wfx-loot/GhostAction technique): %s. Move deployment secrets to protected environments.", len(ungated), r.FullName, strings.Join(ungated, ", ")))
 		}
+		a.branchProtection(r)
 		empty := len(r.Workflows) == 0 && len(r.Secrets) == 0 && len(r.Environments) == 0
 		if len(r.ProtectedBranches) == 0 && len(r.Branches) == 0 && !empty {
 			a.add("WM016", Info, r.FullName, "", r.FullName+"/branches",
 				"Branch protection for "+r.FullName+" was not collected; every branch is treated as pushable by a write credential.")
 		}
+	}
+}
+
+// branchProtection reports (WM020) a default branch a write credential can
+// change on its own, when the repository has something worth reaching:
+// secrets, environments or a workflow that mints OIDC tokens.
+func (a *analyzer) branchProtection(r model.Repo) {
+	if r.DefaultBranch == "" || len(r.Branches) == 0 {
+		return
+	}
+	idToken := false
+	for _, w := range r.Workflows {
+		for _, j := range w.Jobs {
+			if j.IDTokenWrite {
+				idToken = true
+			}
+		}
+	}
+	if len(r.Secrets) == 0 && len(r.Environments) == 0 && !idToken {
+		return
+	}
+	b := r.DefaultBranch
+	switch {
+	case contains(r.ProtectedBranches, b):
+		return
+	case contains(r.WeakProtected, b):
+		a.add("WM020", Medium, r.FullName, "", r.FullName+"|weak|"+b,
+			fmt.Sprintf("Default branch %s of %s is protected, but merging does not require an approving review (or that could not be confirmed). A write credential can merge its own change, so trust and environments limited to %s or to protected branches are treated as reachable. Require at least one approving review (ruleset or branch protection).", b, r.FullName, b))
+	default:
+		a.add("WM020", Medium, r.FullName, "", r.FullName+"|none|"+b,
+			fmt.Sprintf("Default branch %s of %s is not protected. A write credential can push to it directly, which is how wfx-loot injected its payload into existing workflows. Require pull requests with at least one approving review.", b, r.FullName))
 	}
 }
 

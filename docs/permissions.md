@@ -22,6 +22,8 @@ Permission names follow GitHub's fine-grained permission model. Check GitHub's R
 | Environments, reviewers, branch policies, env secrets | `GET /repos/{r}/environments…` | Environments, Secrets | gap recorded |
 | OIDC subject template | `GET /repos/{r}/actions/oidc/customization/sub` | Actions | default template assumed |
 | Branches and protection flag | `GET /repos/{r}/branches` | Contents / Metadata | nothing assumed protected |
+| Ruleset rules per branch | `GET /repos/{r}/rules/branches/{branch}` | Metadata | falls back to classic protection |
+| Classic protection details (required reviews) | `GET /repos/{r}/branches/{branch}/protection` | Administration (read) | branch treated as weakly protected (gap recorded) |
 | Hunt: PRs, commits, runs | `pulls`, `commits`, `actions/runs` | Pull requests, Contents, Actions | hunt indicators skipped |
 
 Anything Wardmap cannot read is recorded as a **collection gap** (WM016) and printed at the top of the report. Missing data is never treated as safe.

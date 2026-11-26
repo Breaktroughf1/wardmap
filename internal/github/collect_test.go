@@ -37,6 +37,7 @@ func TestCollect(t *testing.T) {
 		"/repos/acme/api/environments/prod/secrets":                    map[string]any{"secrets": []map[string]any{{"name": "DB_URL"}}},
 		"/repos/acme/api/actions/oidc/customization/sub":               map[string]any{"use_default": false, "include_claim_keys": []string{"repo", "context"}, "use_immutable_subject": true, "sub_claim_prefix": "repo:acme@111/api@222"},
 		"/repos/acme/api/branches":                                     []map[string]any{{"name": "main", "protected": true}, {"name": "dev", "protected": false}},
+		"/repos/acme/api/rules/branches/main":                          []map[string]any{{"type": "pull_request", "parameters": map[string]any{"required_approving_review_count": 1}}},
 		"/repos/acme/api/contents/.github/workflows":                   []map[string]any{{"path": ".github/workflows/deploy.yml", "type": "file"}},
 		"/repos/acme/api/contents/.github/workflows/deploy.yml":        map[string]any{"content": base64.StdEncoding.EncodeToString([]byte(wf)), "encoding": "base64"},
 		"/repos/acme/api/pulls":                                        []map[string]any{{"number": 1, "title": "docs: dependency audit notes", "created_at": time.Now().Format(time.RFC3339), "user": map[string]any{"login": "x"}, "head": map[string]any{"ref": "wfx-docs"}}},
@@ -164,5 +165,47 @@ func TestPaginationTruncationIsAnError(t *testing.T) {
 	err := paginate(context.Background(), c, "/x", func([]int) {})
 	if !errors.Is(err, ErrTruncated) {
 		t.Fatalf("endless pagination must end in ErrTruncated, got %v", err)
+	}
+}
+
+func TestBranchProtectionStrength(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/repos/o/r":
+			_, _ = w.Write([]byte(`{"full_name":"o/r","default_branch":"main"}`))
+		case "/repos/o/r/branches":
+			_, _ = w.Write([]byte(`[{"name":"main","protected":true},{"name":"release","protected":true},{"name":"legacy","protected":true},{"name":"dev","protected":false}]`))
+		case "/repos/o/r/rules/branches/main", "/repos/o/r/rules/branches/release", "/repos/o/r/rules/branches/legacy":
+			// main: status checks only (no review) via ruleset
+			if strings.HasSuffix(r.URL.Path, "/main") {
+				_, _ = w.Write([]byte(`[{"type":"required_status_checks","parameters":{}}]`))
+				return
+			}
+			_, _ = w.Write([]byte(`[]`))
+		case "/repos/o/r/branches/release/protection":
+			_, _ = w.Write([]byte(`{"required_pull_request_reviews":{"required_approving_review_count":2}}`))
+		case "/repos/o/r/branches/main/protection":
+			w.WriteHeader(404)
+			_, _ = w.Write([]byte(`{"message":"Branch not protected"}`))
+		case "/repos/o/r/branches/legacy/protection":
+			w.WriteHeader(403)
+			_, _ = w.Write([]byte(`{"message":"Must have admin rights"}`))
+		default:
+			w.WriteHeader(404)
+			_, _ = w.Write([]byte(`{"message":"Not Found"}`))
+		}
+	}))
+	defer srv.Close()
+	c := &Client{BaseURL: srv.URL, HTTP: srv.Client(), UserAgent: "test"}
+	s, err := Collect(context.Background(), c, Options{Repos: []string{"o/r"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	r := s.Repos[0]
+	if strings.Join(r.ProtectedBranches, ",") != "release" {
+		t.Errorf("only release requires approvals: strong=%v", r.ProtectedBranches)
+	}
+	if strings.Join(r.WeakProtected, ",") != "main,legacy" {
+		t.Errorf("main (checks only) and legacy (unreadable) must be weak: %v", r.WeakProtected)
 	}
 }

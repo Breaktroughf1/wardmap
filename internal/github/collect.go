@@ -316,6 +316,7 @@ func (col *collector) oidcTemplate(ctx context.Context, r *model.Repo) {
 }
 
 func (col *collector) branches(ctx context.Context, r *model.Repo) {
+	var flagged []string
 	err := paginate(ctx, col.c, "/repos/"+r.FullName+"/branches?per_page=100", func(p []struct {
 		Name      string `json:"name"`
 		Protected bool   `json:"protected"`
@@ -323,13 +324,85 @@ func (col *collector) branches(ctx context.Context, r *model.Repo) {
 		for _, b := range p {
 			r.Branches = append(r.Branches, b.Name)
 			if b.Protected {
-				r.ProtectedBranches = append(r.ProtectedBranches, b.Name)
+				flagged = append(flagged, b.Name)
 			}
 		}
 	})
 	if err != nil {
 		col.gap("%s branches: %v", r.FullName, short(err))
 	}
+	// Rulesets can protect the default branch without the branches API
+	// flagging it, so always check it.
+	check := flagged
+	if r.DefaultBranch != "" && !containsStr(flagged, r.DefaultBranch) {
+		check = append(check, r.DefaultBranch)
+	}
+	for _, b := range check {
+		switch col.protection(ctx, r.FullName, b) {
+		case "strong":
+			r.ProtectedBranches = append(r.ProtectedBranches, b)
+		case "weak", "unknown":
+			if containsStr(flagged, b) {
+				r.WeakProtected = append(r.WeakProtected, b)
+			}
+		}
+	}
+}
+
+// protection reports "strong" when merging into branch needs at least one
+// approving review (or updates are restricted) per an active ruleset or
+// classic protection, "weak" when it is protected without that, "none"
+// when nothing applies, and "unknown" when it could not be read. Unknown is
+// treated as weak: a write credential is assumed able to merge.
+func (col *collector) protection(ctx context.Context, repo, branch string) string {
+	var rules []struct {
+		Type       string `json:"type"`
+		Parameters struct {
+			Approvals int `json:"required_approving_review_count"`
+		} `json:"parameters"`
+	}
+	rulesErr := error(nil)
+	if _, err := col.c.Get(ctx, "/repos/"+repo+"/rules/branches/"+url.PathEscape(branch), &rules); err != nil {
+		rulesErr = err
+	}
+	for _, ru := range rules {
+		if (ru.Type == "pull_request" && ru.Parameters.Approvals >= 1) || ru.Type == "update" {
+			return "strong"
+		}
+	}
+	var prot struct {
+		Reviews *struct {
+			Approvals int `json:"required_approving_review_count"`
+		} `json:"required_pull_request_reviews"`
+	}
+	_, err := col.c.Get(ctx, "/repos/"+repo+"/branches/"+url.PathEscape(branch)+"/protection", &prot)
+	switch {
+	case err == nil && prot.Reviews != nil && prot.Reviews.Approvals >= 1:
+		return "strong"
+	case err == nil:
+		return "weak"
+	case IsAccessDenied(err):
+		var se *StatusError
+		if errors.As(err, &se) && se.Code == 404 && rulesErr == nil {
+			if len(rules) > 0 {
+				return "weak"
+			}
+			return "none"
+		}
+		col.gap("%s branch %s: protection details not readable (needs Administration: read); treated as not requiring review", repo, branch)
+		return "unknown"
+	}
+	col.gap("%s branch %s protection: %v", repo, branch, short(err))
+	return "unknown"
+}
+
+func containsStr(xs []string, s string) bool {
+	for _, x := range xs {
+		if x == s {
+			return true
+		}
+	}
+	return false
 }
 
 func (col *collector) workflows(ctx context.Context, r *model.Repo) {

@@ -171,3 +171,39 @@ func TestWorkflowRunTrust(t *testing.T) {
 		t.Errorf("workflow_run without sources must fail safe, got %d", n)
 	}
 }
+
+func TestWeakBranchProtection(t *testing.T) {
+	base := func() *model.Snapshot {
+		return &model.Snapshot{Repos: []model.Repo{{FullName: "acme/api", DefaultBranch: "main", Branches: []string{"main"},
+			Secrets:      []model.Secret{{Name: "X"}},
+			Environments: []model.Environment{{Name: "prod", BranchPolicy: "protected", Secrets: []model.Secret{{Name: "DB"}}}}}},
+			AWSRoles: []model.AWSRole{{ARN: "arn:aws:iam::1:role/main", TrustPolicy: map[string]any{"Statement": []any{map[string]any{
+				"Effect": "Allow", "Action": "sts:AssumeRoleWithWebIdentity",
+				"Principal": map[string]any{"Federated": "arn:aws:iam::1:oidc-provider/token.actions.githubusercontent.com"},
+				"Condition": map[string]any{"StringEquals": map[string]any{"token.actions.githubusercontent.com:sub": "repo:acme/api:ref:refs/heads/main"}}}}}}}}
+	}
+	reach := func(s *model.Snapshot) (map[string]string, map[string]int) {
+		r := Analyze(s, Options{})
+		m := map[string]string{}
+		for _, e := range r.Edges {
+			m[e.To] = e.Verdict
+		}
+		return m, rules(r)
+	}
+	strong := base()
+	strong.Repos[0].ProtectedBranches = []string{"main"}
+	m, got := reach(strong)
+	if m["aws-role:arn:aws:iam::1:role/main"] != "" || m["secret:acme/api/env/prod/DB"] != "gated" || got["WM020"] != 0 {
+		t.Errorf("review-protected main: role unreachable, env gated, no WM020: %v %v", m, got)
+	}
+	weak := base()
+	weak.Repos[0].WeakProtected = []string{"main"}
+	m, got = reach(weak)
+	if m["aws-role:arn:aws:iam::1:role/main"] != "reachable" || m["secret:acme/api/env/prod/DB"] != "reachable" || got["WM020"] != 1 {
+		t.Errorf("weakly protected main: role and env must be reachable, WM020 raised: %v %v", m, got)
+	}
+	none := base()
+	if _, got = reach(none); got["WM020"] != 1 {
+		t.Errorf("unprotected main must raise WM020: %v", got)
+	}
+}
