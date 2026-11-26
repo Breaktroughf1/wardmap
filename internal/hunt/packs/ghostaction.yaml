@@ -1,33 +1,79 @@
-# IOC pack: GhostAction (waves in 2025 and October 2026).
-# Generic file names such as audit.yml are low confidence on their own; look
-# for them in combination with the campaign window and unknown authors.
+# IOC pack: GhostAction (2025 wave and the 2026 return).
+#
+# Verification status (2026.11.26.2): corroborated by multiple public
+# write-ups ("secondary"). GitGuardian's original posts could not be fetched
+# from the build environment. Re-check against them and update `verified`.
+#
+# Change from 2026.11.26: the earlier `audit.yml` and `ci-check.yml` workflow
+# names were removed because no source supports them.
 id: ghostaction
 name: GhostAction secret exfiltration workflows
-version: 2026.11.26
+version: 2026.11.26.2
 window:
-  start: 2026-10-08T00:00:00Z
-  end: 2026-10-20T00:00:00Z
+  start: 2026-08-31T00:00:00Z
+  end: 2026-10-31T23:59:59Z
+primary:
+  - https://blog.gitguardian.com/ghostaction-github-actions-supply-chain-attack-returns/
+  - https://www.stepsecurity.io/blog/ghostaction-campaign-over-3-000-secrets-stolen-through-malicious-github-workflows
 references:
-  - https://blog.gitguardian.com/
-  - https://www.decryptiondigest.com/blog/ghostaction-github-actions-supply-chain-2026
+  - https://thehackernews.com/2026/10/credential-stealing-github-actions.html
+  - https://threats.wiz.io/all-incidents/ghostaction-campaign
+  - https://gbhackers.com/ghostaction-supply-chain/
+  - https://nhimg.org/ghostaction-returns-2026-772-repositories
 indicators:
+  - id: ghost-workflow
+    type: workflow_path
+    pattern: "*/github_actions_security.y*ml"
+    confidence: high
+    description: Exfiltration workflow ("GitHub Actions Security").
+    sources: [gitguardian-via-search, thehackernews, gbhackers]
+    verified: secondary
+  - id: ghost-workflow-commit
+    type: commit_file
+    pattern: ".github/workflows/github_actions_security.y*ml"
+    confidence: high
+    description: Exfiltration workflow added in a commit, even if later deleted.
+    sources: [gitguardian-via-search, thehackernews]
+    verified: secondary
   - id: ghost-security-audit
     type: workflow_path
     pattern: "*/security-audit.y*ml"
     confidence: medium
-    description: Exfiltration workflow name used by GhostAction.
-  - id: ghost-audit
+    description: Variant exfiltration workflow ("Security Audit").
+    sources: [thehackernews, gbhackers]
+    verified: secondary
+  - id: ghost-security-check
     type: workflow_path
-    pattern: "*/audit.y*ml"
+    pattern: "*/security-check.y*ml"
     confidence: low
-    description: Generic name also used by GhostAction; confirm by content and author.
-  - id: ghost-ci-check
-    type: workflow_path
-    pattern: "*/ci-check.y*ml"
-    confidence: low
-    description: Generic name also used by GhostAction; confirm by content and author.
-  - id: ghost-commit-workflow
-    type: commit_file
-    pattern: ".github/workflows/security-audit.y*ml"
+    description: Variant name seen in one source's metadata only; confirm by content.
+    sources: [single-source]
+    verified: secondary
+  - id: ghost-commit-add
+    type: commit_message
+    pattern: "Add Github Actions Security workflow*"
+    confidence: high
+    description: Commit message adding the exfiltration workflow.
+    sources: [gitguardian-via-search, thehackernews]
+    verified: secondary
+  - id: ghost-commit-update
+    type: commit_message
+    pattern: "Update Github Actions Security workflow*"
+    confidence: high
+    description: Commit message used when an existing workflow was modified instead.
+    sources: [gitguardian-via-search]
+    verified: secondary
+  - id: ghost-exfil-2026
+    type: workflow_endpoint
+    pattern: "*193.32.204.199*"
+    confidence: high
+    description: Hard-coded exfiltration IP reported for the 2026 wave (plain HTTP).
+    sources: [thehackernews, gbhackers, wiz]
+    verified: secondary
+  - id: ghost-exfil-2025
+    type: workflow_endpoint
+    pattern: "*45.139.104.115*"
     confidence: medium
-    description: Commit adding the GhostAction workflow.
+    description: IP the 2025-wave exfiltration host resolved to during the campaign window.
+    sources: [single-source]
+    verified: secondary

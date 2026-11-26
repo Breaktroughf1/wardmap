@@ -21,6 +21,7 @@ demo: build
 	./wardmap import -s $(DEMO)/snapshot.json -o $(TMP)/wardmap-demo.json \
 	  --aws $(DEMO)/aws-roles.json \
 	  --azure $(DEMO)/fic-0b1c2d3e-4f50-6172-8394-a5b6c7d8e9f0.json \
-	  --gcp $(DEMO)/gcp-providers.json --cloudtrail $(DEMO)/cloudtrail.json
+	  --gcp $(DEMO)/gcp-providers.json --cloudtrail $(DEMO)/cloudtrail.json \
+	  --azure-audit $(DEMO)/entra-audit.json
 	./wardmap scan -s $(TMP)/wardmap-demo.json
 	./wardmap hunt -s $(TMP)/wardmap-demo.json

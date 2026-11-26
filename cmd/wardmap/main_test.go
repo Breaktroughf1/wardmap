@@ -40,7 +40,8 @@ func demoSnapshot(t *testing.T) string {
 		"--aws", demo+"aws-roles.json",
 		"--azure", demo+"fic-0b1c2d3e-4f50-6172-8394-a5b6c7d8e9f0.json",
 		"--gcp", demo+"gcp-providers.json",
-		"--cloudtrail", demo+"cloudtrail.json")
+		"--cloudtrail", demo+"cloudtrail.json",
+		"--azure-audit", demo+"entra-audit.json")
 	if code != 0 {
 		t.Fatalf("import exit %d", code)
 	}
@@ -87,7 +88,8 @@ func TestDemoBaselineAndHunt(t *testing.T) {
 		t.Errorf("baselined scan should pass, got %d", code)
 	}
 	code, out := wm(t, "hunt", "-s", s, "--fail-on", "high")
-	if code != 1 || !strings.Contains(out, "oidc-from-deleted-branch") || !strings.Contains(out, "wfx-run-gap") {
+	if code != 1 || !strings.Contains(out, "oidc-from-deleted-branch") || !strings.Contains(out, "wfx-run-gap") ||
+		!strings.Contains(out, "wfx-entra-audit") || !strings.Contains(out, "wfx-aws-trust-change") {
 		t.Errorf("hunt exit %d output:\n%s", code, out)
 	}
 	_, sarif := wm(t, "scan", "-s", s, "--format", "sarif")

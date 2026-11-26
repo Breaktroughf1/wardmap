@@ -1,0 +1,52 @@
+{
+  "value": [
+    {
+      "activityDateTime": "2026-11-10T14:06:55Z",
+      "activityDisplayName": "Update application",
+      "result": "success",
+      "initiatedBy": {
+        "app": {
+          "displayName": "example-org-ci-deployer"
+        }
+      },
+      "targetResources": [
+        {
+          "id": "9a8b7c6d-0000-4000-8000-000000000001",
+          "displayName": "example-org-api-deployer",
+          "type": "Application",
+          "modifiedProperties": [
+            {
+              "displayName": "FederatedIdentityCredentials",
+              "oldValue": "\"[{\\\"Name\\\": \\\"api-main\\\", \\\"Issuer\\\": \\\"https://token.actions.githubusercontent.com\\\", \\\"Subject\\\": \\\"repo:example-org/api:ref:refs/heads/main\\\"}]\"",
+              "newValue": "\"[{\\\"Name\\\": \\\"api-main\\\", \\\"Issuer\\\": \\\"https://token.actions.githubusercontent.com\\\", \\\"Subject\\\": \\\"repo:example-org/api:ref:refs/heads/main\\\"}, {\\\"Name\\\": \\\"wfx-ci-3b9f\\\", \\\"Issuer\\\": \\\"https://token.actions.githubusercontent.com\\\", \\\"Subject\\\": \\\"repo:example-org/api:ref:refs/heads/wfx-docs-7c1e\\\"}]\""
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "activityDateTime": "2026-11-12T09:00:00Z",
+      "activityDisplayName": "Update application",
+      "result": "success",
+      "initiatedBy": {
+        "user": {
+          "userPrincipalName": "admin@example.org"
+        }
+      },
+      "targetResources": [
+        {
+          "id": "x",
+          "displayName": "unrelated-app",
+          "type": "Application",
+          "modifiedProperties": [
+            {
+              "displayName": "DisplayName",
+              "oldValue": "\"a\"",
+              "newValue": "\"b\""
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

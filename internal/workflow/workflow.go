@@ -19,6 +19,9 @@ var (
 	secretDotRe     = regexp.MustCompile(`secrets\.([A-Za-z_][A-Za-z0-9_]*)`)
 	secretIndexRe   = regexp.MustCompile(`secrets\[\s*['"]([^'"]+)['"]\s*\]`)
 	secretsDumpRe   = regexp.MustCompile(`toJSON\(\s*secrets\s*\)`)
+	contextDumpRe   = regexp.MustCompile(`toJSON\(\s*(secrets|vars)\s*\)`)
+	urlRe           = regexp.MustCompile(`https?://[^\s"'<>()]+`)
+	ipv4Re          = regexp.MustCompile(`\b(?:25[0-5]|2[0-4]\d|1?\d?\d)(?:\.(?:25[0-5]|2[0-4]\d|1?\d?\d)){3}\b`)
 	shaPinRe        = regexp.MustCompile(`@[0-9a-f]{40}$`)
 	prHeadRefRe     = regexp.MustCompile(`github\.event\.pull_request\.head\.(sha|ref)|github\.head_ref|refs/pull/`)
 	firstPartyOwner = map[string]bool{"actions": true, "github": true}
@@ -38,6 +41,7 @@ func Parse(path string, data []byte) model.Workflow {
 		return w
 	}
 	doc := root.Content[0]
+	w.Endpoints = endpoints(string(data))
 	onNode := mapGet(doc, "on")
 	if onNode == nil {
 		onNode = mapGet(doc, "true") // YAML 1.1 parsers turn `on` into true
@@ -73,6 +77,9 @@ func Parse(path string, data []byte) model.Workflow {
 		all := nodeText(jn)
 		if secretsDumpRe.MatchString(all) {
 			j.InheritsAll = true
+		}
+		if contextDumpRe.MatchString(all) {
+			j.DumpsSecrets = true
 		}
 		if s := mapGet(jn, "secrets"); s != nil && s.Kind == yaml.ScalarNode && s.Value == "inherit" {
 			j.InheritsAll = true
@@ -112,6 +119,15 @@ func Parse(path string, data []byte) model.Workflow {
 		w.Jobs = append(w.Jobs, j)
 	}
 	return w
+}
+
+// endpoints extracts URLs and IPv4 addresses (deduplicated, sorted). Common
+// documentation hosts are kept: filtering is left to IOC patterns.
+func endpoints(text string) []string {
+	var out []string
+	out = append(out, urlRe.FindAllString(text, -1)...)
+	out = append(out, ipv4Re.FindAllString(text, -1)...)
+	return uniq(out)
 }
 
 func triggers(n *yaml.Node) (trig []string, push []string) {

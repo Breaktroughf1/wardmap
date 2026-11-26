@@ -1,10 +1,16 @@
 {
   "Events": [
     {
-      "CloudTrailEvent": "{\"eventName\": \"AssumeRoleWithWebIdentity\", \"eventTime\": \"2026-11-10T14:05:11Z\", \"sourceIPAddress\": \"198.51.100.23\", \"userAgent\": \"aws-sdk-js\", \"userIdentity\": {\"type\": \"WebIdentityUser\", \"userName\": \"repo:example-org/api:ref:refs/heads/tmp-ci-9x2\", \"identityProvider\": \"arn:aws:iam::111122223333:oidc-provider/token.actions.githubusercontent.com\"}, \"requestParameters\": {\"roleArn\": \"arn:aws:iam::111122223333:role/org-artifacts-read\"}}"
+      "CloudTrailEvent": "{\"eventName\": \"AssumeRoleWithWebIdentity\", \"eventTime\": \"2026-11-10T14:05:11Z\", \"sourceIPAddress\": \"198.51.100.23\", \"userAgent\": \"aws-sdk-js\", \"userIdentity\": {\"type\": \"WebIdentityUser\", \"userName\": \"repo:example-org/api:ref:refs/heads/tmp-ci-9x2\", \"identityProvider\": \"arn:aws:iam::111122223333:oidc-provider/token.actions.githubusercontent.com\"}, \"requestParameters\": {\"roleArn\": \"arn:aws:iam::111122223333:role/org-artifacts-read\", \"roleSessionName\": \"wfx-5d1c\"}}"
     },
     {
       "CloudTrailEvent": "{\"eventName\": \"AssumeRoleWithWebIdentity\", \"eventTime\": \"2026-11-12T08:00:00Z\", \"sourceIPAddress\": \"192.0.2.10\", \"userAgent\": \"aws-sdk-js\", \"userIdentity\": {\"type\": \"WebIdentityUser\", \"userName\": \"repo:example-org/api:ref:refs/heads/main\", \"identityProvider\": \"arn:aws:iam::111122223333:oidc-provider/token.actions.githubusercontent.com\"}, \"requestParameters\": {\"roleArn\": \"arn:aws:iam::111122223333:role/org-artifacts-read\"}}"
+    },
+    {
+      "CloudTrailEvent": "{\"eventName\": \"UpdateAssumeRolePolicy\", \"eventTime\": \"2026-11-10T14:06:40Z\", \"sourceIPAddress\": \"198.51.100.23\", \"userIdentity\": {\"type\": \"AssumedRole\", \"arn\": \"arn:aws:sts::111122223333:assumed-role/org-artifacts-read/wfx-5d1c\"}, \"requestParameters\": {\"roleName\": \"legacy-ci-admin\"}}"
+    },
+    {
+      "CloudTrailEvent": "{\"eventName\": \"CreateAccessKey\", \"eventTime\": \"2026-11-10T14:07:02Z\", \"sourceIPAddress\": \"198.51.100.23\", \"userIdentity\": {\"type\": \"AssumedRole\", \"arn\": \"arn:aws:sts::111122223333:assumed-role/org-artifacts-read/wfx-5d1c\"}, \"requestParameters\": {\"userName\": \"ci-deployer\"}}"
     }
   ]
 }

@@ -52,14 +52,41 @@ func TestGCPAndCloudTrail(t *testing.T) {
 	if err != nil || len(p) != 1 || p[0].AttributeCondition == "" || p[0].IssuerURI == "" {
 		t.Fatalf("gcp: %v %+v", err, p)
 	}
-	ev, err := CloudTrail(demo + "cloudtrail.json")
-	if err != nil || len(ev) != 2 || ev[0].Subject == "" || ev[0].RoleARN == "" {
+	ev, other, err := CloudTrail(demo + "cloudtrail.json")
+	if err != nil || len(ev) != 2 || ev[0].Subject == "" || ev[0].RoleARN == "" || ev[0].SessionName != "wfx-5d1c" {
 		t.Fatalf("cloudtrail: %v %+v", err, ev)
+	}
+	if len(other) != 2 || other[0].EventName != "UpdateAssumeRolePolicy" || other[0].SessionName != "wfx-5d1c" || other[0].Target != "legacy-ci-admin" || other[1].Target != "ci-deployer" {
+		t.Fatalf("persistence events: %+v", other)
 	}
 	raw := filepath.Join(t.TempDir(), "trail.json")
 	_ = os.WriteFile(raw, []byte(`{"Records":[{"eventName":"AssumeRoleWithWebIdentity","eventTime":"2026-11-10T00:00:00Z","userIdentity":{"userName":"repo:a/b:pull_request","identityProvider":"arn:aws:iam::1:oidc-provider/token.actions.githubusercontent.com"},"requestParameters":{"roleArn":"r"}},{"eventName":"ConsoleLogin"}]}`), 0o600)
-	ev, err = CloudTrail(raw)
+	ev, _, err = CloudTrail(raw)
 	if err != nil || len(ev) != 1 {
 		t.Fatalf("raw trail: %v %+v", err, ev)
+	}
+}
+
+func TestAzureAudit(t *testing.T) {
+	ev, err := AzureAudit(demo + "entra-audit.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(ev) != 1 {
+		t.Fatalf("only the federated-credential change should be kept: %+v", ev)
+	}
+	if len(ev[0].FICNames) != 1 || ev[0].FICNames[0] != "wfx-ci-3b9f" || ev[0].Initiator != "example-org-ci-deployer" {
+		t.Fatalf("added credential not extracted: %+v", ev[0])
+	}
+	arr := filepath.Join(t.TempDir(), "a.json")
+	_ = os.WriteFile(arr, []byte(`[{"activityDisplayName":"Add federated identity credential","targetResources":[{"displayName":"app"}]}]`), 0o600)
+	ev, err = AzureAudit(arr)
+	if err != nil || len(ev) != 1 {
+		t.Fatalf("bare array with federated activity: %v %+v", err, ev)
+	}
+	bad := filepath.Join(t.TempDir(), "b.json")
+	_ = os.WriteFile(bad, []byte(`"nope"`), 0o600)
+	if _, err := AzureAudit(bad); err == nil {
+		t.Error("non-audit JSON should be an error")
 	}
 }

@@ -34,5 +34,9 @@ Wardmap never calls cloud APIs. Export the data yourself with read-only roles:
 |---|---|---|
 | AWS | `aws iam list-roles` or `aws iam get-account-authorization-details --filter Role` | `iam:ListRoles` / `iam:GetAccountAuthorizationDetails` |
 | AWS CloudTrail | `aws cloudtrail lookup-events --lookup-attributes AttributeKey=EventName,AttributeValue=AssumeRoleWithWebIdentity` | `cloudtrail:LookupEvents` |
+| AWS CloudTrail (persistence) | `aws cloudtrail lookup-events --lookup-attributes AttributeKey=EventName,AttributeValue=UpdateAssumeRolePolicy` (repeat for `CreateAccessKey`) | `cloudtrail:LookupEvents` |
 | Azure | `az ad app federated-credential list --id <APP_ID>` | `Application.Read.All` |
+| Entra audit logs | `az rest --method get --url "https://graph.microsoft.com/v1.0/auditLogs/directoryAudits?$filter=activityDisplayName eq 'Update application'"` | `AuditLog.Read.All` |
 | GCP | `gcloud iam workload-identity-pools providers list --workload-identity-pool=<POOL> --location=global --format=json` | `iam.workloadIdentityPoolProviders.list` |
+
+`lookup-events` covers the last 90 days of management events. For older activity, export from your trail's S3 bucket and pass the log files with `--cloudtrail`; raw `{"Records": [...]}` files are accepted. Entra audit logs are retained for 30 days on most tenants, so export them early in an investigation.

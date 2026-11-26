@@ -1,73 +1,197 @@
 # IOC pack: wfx-loot (November 2026).
-# Indicators are compiled from public write-ups (Aikido Security, GitGuardian,
-# Endor Labs, StepSecurity, OX Security, Barrier Networks). They are hunting
-# leads, not proof of compromise. Send corrections as pull requests.
+#
+# Verification status (2026.11.26.2): every indicator is backed by public
+# reporting ("secondary"); `sources` lists who reports it. Most have two or
+# more independent sources. Single-source indicators: wfx-branch-chore,
+# wfx-branch-ci-check, wfx-commit-helper, wfx-commit-audit-workflow,
+# wfx-commit-cleanup, wfx-aws-session, wfx-aws-trust-change. The original research
+# posts (Aikido Security, GitGuardian, StepSecurity, Endor Labs) could not be
+# fetched from the build environment, so no indicator is marked "primary" yet.
+# Re-check against the primary posts listed under `primary` and update
+# `verified` when you do.
+#
+# Payload SHA-256 reported for the base stealer script (Wardmap does not hash
+# file contents; use it with your own tooling):
+#   89695abb392d5cfd4972672961e644bb46baa98aa1ed7173c2a2816c762735cf
+#
+# Indicators are hunting leads, not proof of compromise.
 id: wfx-loot
 name: wfx-loot GitHub Actions secret stealer
-version: 2026.11.26
+version: 2026.11.26.2
 window:
-  start: 2026-11-10T00:00:00Z
-references:
+  start: 2026-11-10T12:45:00Z
+primary:
   - https://www.aikido.dev/blog/compromised-github-accounts-push-ci-secret-stealer-to-tens-of-thousands-of-repositories
   - https://blog.gitguardian.com/wfx-loot-a-ci-secret-stealer-pushed-with-stolen-github-credentials/
-  - https://www.endorlabs.com/learn/github-actions-supply-chain-attack-targeting-ci-secrets-at-scale
   - https://www.stepsecurity.io/blog/wfx-phantom-the-github-actions-secret-stealer
+  - https://www.endorlabs.com/learn/github-actions-supply-chain-attack-targeting-ci-secrets-at-scale
+references:
+  - https://www.bleepingcomputer.com/news/security/hackers-compromise-4-800-github-accounts-to-steal-cloud-credentials/
+  - https://securityboulevard.com/2026/11/wfx-loot-a-ci-secret-stealer-pushed-with-stolen-github-credentials/
+  - https://labs.cloudsecurityalliance.org/research/csa-research-note-wfx-github-ci-secret-stealer-20261112-csa/
+  - https://www.chainguard.dev/unchained/wfx-loot-stolen-github-tokens-pushed-a-ci-secret-stealer-into-60-000-repositories-november-2026
+  - https://o3.security/blog/wfx-github-actions-secret-stealer-compromised-accounts
+  - https://fixlane.poparecon.com/guides/wfx-loot-github-ci-secret-stealer
+  - https://www.rescana.com/post/wfx-loot-github-accounts-ci-secret-stealer-prepare-now
+  - https://phoenix.security/wfx-github-actions-credential-stealer-ci-secret-theft/
+  - https://techatelier.fr/en/blog/github-wfx-loot-ci-secrets-theft-november-2026/
 indicators:
+  # --- Probe stage: tests whether a stolen token can write ---------------
   - id: wfx-branch
     type: branch_name
     pattern: "wfx-docs*"
     confidence: high
     description: Probe branch created by the campaign.
+    sources: [bleepingcomputer, securityboulevard-gitguardian, fixlane, o3.security]
+    verified: secondary
   - id: wfx-pr-title
     type: pr_title
     pattern: "docs: dependency audit notes*"
     confidence: high
-    description: Title of the campaign's probe pull requests.
+    description: Title of the probe pull requests.
+    sources: [securityboulevard-gitguardian, fixlane, o3.security, cyberexperts]
+    verified: secondary
   - id: wfx-pr-branch
     type: pr_head_ref
     pattern: "wfx-docs*"
     confidence: high
     description: Probe pull request opened from a wfx-docs branch.
+    sources: [securityboulevard-gitguardian, fixlane]
+    verified: secondary
+  - id: wfx-probe-file
+    type: commit_file
+    pattern: "docs/wfx-audit.md"
+    confidence: high
+    description: Payload-free file added by the probe pull request.
+    sources: [securityboulevard-gitguardian, windowsforum]
+    verified: secondary
+
+  # --- Delivery: three variants -----------------------------------------
+  - id: wfx-branch-chore
+    type: branch_name
+    pattern: "chore/????????"
+    confidence: low
+    description: Short-lived delivery branch (chore/ plus eight characters). Common naming scheme; confirm by date and author.
+    sources: [o3.security]
+    verified: secondary
+  - id: wfx-branch-ci-check
+    type: branch_name
+    pattern: "ci-check-????"
+    confidence: medium
+    description: Short-lived delivery branch (ci-check- plus four digits).
+    sources: [o3.security]
+    verified: secondary
   - id: wfx-commit-cache
     type: commit_message
     pattern: "ci: refresh build cache*"
     confidence: medium
-    description: Commit message used when injecting the payload into existing workflows.
+    description: Commit injecting about 1,500 lines into an existing workflow.
+    sources: [o3.security, chainguard, techatelier]
+    verified: secondary
+  - id: wfx-commit-helper
+    type: commit_message
+    pattern: "chore: add ci helper*"
+    confidence: medium
+    description: Commit adding the hidden .ci-xxxxxx.sh script.
+    sources: [o3.security]
+    verified: secondary
+  - id: wfx-commit-audit-workflow
+    type: commit_message
+    pattern: "chore: add dependency audit workflow*"
+    confidence: medium
+    description: Commit adding the throwaway build-audit workflow.
+    sources: [o3.security]
+    verified: secondary
   - id: wfx-commit-restore
     type: commit_message
     pattern: "ci: restore*"
     confidence: medium
-    description: Commit message used when reverting the injection to hide it.
-  - id: wfx-script
-    type: commit_file
-    pattern: "*/.ci-??????.sh"
-    confidence: high
-    description: Dropped payload script (.ci-xxxxxx.sh) in a subdirectory.
+    description: Revert commit used to hide the injection.
+    sources: [o3.security, techatelier]
+    verified: secondary
+  - id: wfx-commit-cleanup
+    type: commit_message
+    pattern: "ci: cleanup*"
+    confidence: low
+    description: Revert commit used to hide the injection. Common message; confirm by date and author.
+    sources: [o3.security]
+    verified: secondary
   - id: wfx-script-root
     type: commit_file
     pattern: ".ci-??????.sh"
     confidence: high
-    description: Dropped payload script at repository root.
+    description: Hidden payload script at the repository root, run from an npm postinstall hook.
+    sources: [o3.security, chainguard, tigergate]
+    verified: secondary
+  - id: wfx-script
+    type: commit_file
+    pattern: "*/.ci-??????.sh"
+    confidence: high
+    description: Hidden payload script in a subdirectory.
+    sources: [o3.security, chainguard]
+    verified: secondary
   - id: wfx-workflow
     type: workflow_path
-    pattern: "*build-audit-*.yml"
+    pattern: "*build-audit-??????.y*ml"
     confidence: high
-    description: Throwaway workflow file name.
+    description: Throwaway workflow (build-audit- plus six characters).
+    sources: [o3.security, chainguard, techatelier]
+    verified: secondary
   - id: wfx-workflow-commit
     type: commit_file
-    pattern: ".github/workflows/build-audit-*.y*ml"
+    pattern: ".github/workflows/build-audit-??????.y*ml"
     confidence: high
-    description: Throwaway workflow added in a commit (even if later deleted).
+    description: Throwaway workflow added in a commit, even if the file was later deleted.
+    sources: [o3.security, chainguard]
+    verified: secondary
+  - id: wfx-run-gap
+    type: run_number_gap
+    confidence: medium
+    description: Workflow runs deleted after execution leave gaps in run numbers; described as the most reliable trace.
+    sources: [o3.security, techatelier, endorlabs-via-search]
+    verified: secondary
+
+  # --- Cloud persistence -------------------------------------------------
   - id: wfx-entra-fic
     type: azure_fic_name
     pattern: "wfx-ci-*"
     confidence: high
-    description: Entra federated credential added for persistence.
+    description: Entra federated credential added for persistence; trusts the compromised repository.
+    sources: [rescana, csa, phoenix.security, windowsforum]
+    verified: secondary
+  - id: wfx-entra-audit
+    type: azure_audit_fic_name
+    pattern: "wfx-ci-*"
+    confidence: high
+    description: Entra audit log shows a wfx-ci-* federated credential being added (catches credentials already deleted).
+    sources: [rescana, csa, phoenix.security]
+    verified: secondary
   - id: wfx-aws-trust
     type: aws_wildcard_principal
     confidence: high
-    description: AWS role trust rewritten to Principal {"AWS":"*"} for persistence.
-  - id: wfx-run-gap
-    type: run_number_gap
-    confidence: medium
-    description: Workflow runs deleted after execution leave gaps in run numbers.
+    description: AWS role trust rewritten to a wildcard principal ({"AWS":"*"}) for persistence.
+    sources: [rescana, csa, phoenix.security, chainguard]
+    verified: secondary
+  - id: wfx-aws-session
+    type: cloudtrail_session_name
+    pattern: "wfx-*"
+    confidence: high
+    description: AWS session named wfx-*.
+    sources: [rescana]
+    verified: secondary
+  - id: wfx-aws-trust-change
+    type: cloudtrail_event
+    pattern: "UpdateAssumeRolePolicy"
+    session: "wfx-*"
+    confidence: high
+    description: A wfx-* session rewrote a role trust policy.
+    sources: [rescana]
+    verified: secondary
+  - id: wfx-aws-access-key
+    type: cloudtrail_event
+    pattern: "CreateAccessKey"
+    session: "wfx-*"
+    confidence: high
+    description: A wfx-* session created a long-lived IAM access key.
+    sources: [rescana, csa]
+    verified: secondary

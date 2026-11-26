@@ -35,7 +35,7 @@ const usage = `wardmap — map your CI's blast radius
 
 Usage:
   wardmap collect   --org ORG | --repo OWNER/NAME... [--hunt] [-o snapshot.json]
-  wardmap import    -s snapshot.json [--aws FILE] [--azure [APPID=]FILE] [--gcp FILE] [--cloudtrail FILE]
+  wardmap import    -s snapshot.json [--aws FILE] [--azure [APPID=]FILE] [--gcp FILE] [--cloudtrail FILE] [--azure-audit FILE]
   wardmap local     [--dir .] [--repo OWNER/NAME] [-o snapshot.json]   (offline: workflows from disk)
   wardmap scan      -s snapshot.json [--format md|json|sarif|mermaid|dot] [--fail-on SEV] [--baseline FILE]
   wardmap baseline  -s snapshot.json [-o wardmap-baseline.json]
@@ -83,6 +83,7 @@ type common struct {
 	since      string
 	aws, gcp   multi
 	azure, ct  multi
+	azureAudit multi
 	iocs       string
 	dir        string
 	noProgress bool
@@ -107,6 +108,7 @@ func newFlags(name string) *common {
 	c.fs.Var(&c.azure, "azure", "Azure federated credentials export, [APPID=]FILE (repeatable)")
 	c.fs.Var(&c.gcp, "gcp", "GCP providers export (repeatable)")
 	c.fs.Var(&c.ct, "cloudtrail", "CloudTrail export (repeatable)")
+	c.fs.Var(&c.azureAudit, "azure-audit", "Entra ID directory audit export (repeatable)")
 	c.fs.StringVar(&c.iocs, "iocs", "", "directory of extra or replacement IOC packs")
 	c.fs.StringVar(&c.dir, "dir", ".", "repository checkout for `local`")
 	c.fs.BoolVar(&c.noProgress, "quiet", false, "suppress progress output")
@@ -330,11 +332,19 @@ func importInto(s *model.Snapshot, c *common) error {
 		s.GCPProviders = append(s.GCPProviders, r...)
 	}
 	for _, f := range c.ct {
-		r, err := importer.CloudTrail(f)
+		r, other, err := importer.CloudTrail(f)
 		if err != nil {
 			return err
 		}
 		s.CloudTrail = append(s.CloudTrail, r...)
+		s.CloudTrailEvents = append(s.CloudTrailEvents, other...)
+	}
+	for _, f := range c.azureAudit {
+		r, err := importer.AzureAudit(f)
+		if err != nil {
+			return err
+		}
+		s.AzureAudit = append(s.AzureAudit, r...)
 	}
 	return nil
 }

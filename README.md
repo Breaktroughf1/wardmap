@@ -52,8 +52,11 @@ aws iam list-roles > aws.json
 az ad app federated-credential list --id "$APP_ID" > "fic-$APP_ID.json"
 gcloud iam workload-identity-pools providers list --workload-identity-pool=POOL --location=global --format=json > gcp.json
 aws cloudtrail lookup-events --lookup-attributes AttributeKey=EventName,AttributeValue=AssumeRoleWithWebIdentity > ct.json
+aws cloudtrail lookup-events --lookup-attributes AttributeKey=EventName,AttributeValue=UpdateAssumeRolePolicy > ct-trust.json
+az rest --method get --url "https://graph.microsoft.com/v1.0/auditLogs/directoryAudits?\$filter=activityDisplayName eq 'Update application'" > entra-audit.json
 
-wardmap import -s snapshot.json --aws aws.json --azure "fic-$APP_ID.json" --gcp gcp.json --cloudtrail ct.json
+wardmap import -s snapshot.json --aws aws.json --azure "fic-$APP_ID.json" --gcp gcp.json \
+  --cloudtrail ct.json --cloudtrail ct-trust.json --azure-audit entra-audit.json
 wardmap scan -s snapshot.json                  # Markdown report
 wardmap hunt -s snapshot.json                  # wfx-loot / GhostAction indicators
 wardmap rotate-plan -s snapshot.json --repo your-org/affected-repo
@@ -67,11 +70,11 @@ No token at all? `wardmap local --dir .` scans the workflows in a checkout.
 |---|---|
 | `collect` | Read-only GitHub collection into a snapshot (`--hunt` adds PRs, commits, runs) |
 | `local` | Offline snapshot from workflows on disk |
-| `import` | Add AWS, Azure, GCP and CloudTrail exports to a snapshot |
+| `import` | Add AWS, Azure, GCP, CloudTrail and Entra audit-log exports to a snapshot |
 | `scan` | Reach graph and 18 rules; `md`, `json`, `sarif`, `mermaid`, `dot` |
 | `reach QUERY` | Who can reach a secret, role, environment or repository |
 | `baseline` / `scan --baseline` | Approve today's reach; fail CI on *new* reach or findings |
-| `hunt` | Match versioned IOC packs; run-number gaps; OIDC sessions from deleted branches |
+| `hunt` | Match versioned IOC packs; run-number gaps; OIDC sessions from deleted branches; trust rewrites and backdoor credentials in CloudTrail and Entra audit logs |
 | `rotate-plan` | Ordered runbook: persistence → cloud trust → registries → GitHub → cloud keys → app secrets |
 | `run` | `collect`/`local` + `import` + `scan` in one step (used by the Action) |
 

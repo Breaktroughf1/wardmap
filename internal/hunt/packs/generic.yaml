@@ -1,7 +1,7 @@
 # Campaign-independent signals of CI credential theft.
 id: generic
 name: Generic CI credential-theft signals
-version: 2026.11.26
+version: 2026.11.26.2
 indicators:
   - id: oidc-from-deleted-branch
     type: cloudtrail_deleted_branch
@@ -15,3 +15,17 @@ indicators:
     type: cloudtrail_pull_request
     confidence: medium
     description: A cloud session was issued to a pull_request token.
+  - id: secrets-context-dump
+    type: workflow_secrets_dump
+    confidence: medium
+    description: A workflow serialises the whole secrets or vars context (toJSON(secrets)), which stealers do and legitimate workflows rarely do.
+  - id: trust-policy-change
+    type: cloudtrail_event
+    pattern: "UpdateAssumeRolePolicy"
+    confidence: low
+    description: A role trust policy was changed. Review each change made during a campaign window.
+  - id: oidc-provider-change
+    type: cloudtrail_event
+    pattern: "*OpenIDConnectProvider*"
+    confidence: medium
+    description: The account's OIDC identity providers were created or modified.

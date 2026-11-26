@@ -27,6 +27,7 @@ type Pack struct {
 	Name       string      `yaml:"name"`
 	Version    string      `yaml:"version"`
 	Window     Window      `yaml:"window"`
+	Primary    []string    `yaml:"primary"`
 	References []string    `yaml:"references"`
 	Indicators []Indicator `yaml:"indicators"`
 }
@@ -49,11 +50,19 @@ func (w Window) contains(t time.Time) bool {
 
 // Indicator is one IOC.
 type Indicator struct {
-	ID          string `yaml:"id"`
-	Type        string `yaml:"type"`
-	Pattern     string `yaml:"pattern"`
-	Confidence  string `yaml:"confidence"`
-	Description string `yaml:"description"`
+	ID      string `yaml:"id" json:"id"`
+	Type    string `yaml:"type" json:"type"`
+	Pattern string `yaml:"pattern" json:"pattern,omitempty"`
+	// Session optionally constrains cloudtrail_event to sessions whose name
+	// matches this pattern.
+	Session     string `yaml:"session" json:"session,omitempty"`
+	Confidence  string `yaml:"confidence" json:"confidence"`
+	Description string `yaml:"description" json:"description"`
+	// Sources lists the write-ups that report this indicator.
+	Sources []string `yaml:"sources" json:"sources,omitempty"`
+	// Verified is "primary" when checked against the original researchers'
+	// publication, "secondary" when only corroborated by other reporting.
+	Verified string `yaml:"verified" json:"verified,omitempty"`
 }
 
 // Hit is a matched indicator.
@@ -73,6 +82,50 @@ var confRank = map[string]int{"low": 1, "medium": 2, "high": 3}
 // ConfidenceAtLeast reports whether c >= min.
 func ConfidenceAtLeast(c, min string) bool { return confRank[c] >= confRank[min] }
 
+// KnownTypes lists every indicator type Run understands.
+var KnownTypes = map[string]bool{
+	"branch_name": true, "pr_title": true, "pr_head_ref": true, "commit_message": true,
+	"commit_file": true, "workflow_path": true, "workflow_endpoint": true,
+	"workflow_secrets_dump": true, "azure_fic_name": true, "azure_audit_fic_name": true,
+	"aws_wildcard_principal": true, "run_number_gap": true, "cloudtrail_session_name": true,
+	"cloudtrail_event": true, "cloudtrail_deleted_branch": true, "cloudtrail_unknown_repo": true,
+	"cloudtrail_pull_request": true,
+}
+
+var needsPattern = map[string]bool{
+	"branch_name": true, "pr_title": true, "pr_head_ref": true, "commit_message": true,
+	"commit_file": true, "workflow_path": true, "workflow_endpoint": true,
+	"azure_fic_name": true, "azure_audit_fic_name": true, "cloudtrail_session_name": true,
+	"cloudtrail_event": true,
+}
+
+// Validate rejects packs with unknown types, missing patterns, duplicate ids
+// or bad confidence values, so a typo can never silently disable an IOC.
+func (p Pack) Validate() error {
+	if p.ID == "" || p.Version == "" {
+		return fmt.Errorf("pack needs id and version")
+	}
+	seen := map[string]bool{}
+	for _, in := range p.Indicators {
+		switch {
+		case in.ID == "":
+			return fmt.Errorf("pack %s: indicator without id", p.ID)
+		case seen[in.ID]:
+			return fmt.Errorf("pack %s: duplicate indicator %s", p.ID, in.ID)
+		case !KnownTypes[in.Type]:
+			return fmt.Errorf("pack %s: indicator %s has unknown type %q", p.ID, in.ID, in.Type)
+		case needsPattern[in.Type] && in.Pattern == "":
+			return fmt.Errorf("pack %s: indicator %s needs a pattern", p.ID, in.ID)
+		case confRank[in.Confidence] == 0:
+			return fmt.Errorf("pack %s: indicator %s has confidence %q (want low, medium or high)", p.ID, in.ID, in.Confidence)
+		case in.Verified != "" && in.Verified != "primary" && in.Verified != "secondary":
+			return fmt.Errorf("pack %s: indicator %s has verified %q (want primary or secondary)", p.ID, in.ID, in.Verified)
+		}
+		seen[in.ID] = true
+	}
+	return nil
+}
+
 // LoadPacks loads built-in packs plus any *.yaml in dir (dir may be empty).
 func LoadPacks(dir string) ([]Pack, error) {
 	var packs []Pack
@@ -86,6 +139,9 @@ func LoadPacks(dir string) ([]Pack, error) {
 		}
 		var pk Pack
 		if err := yaml.Unmarshal(b, &pk); err != nil {
+			return fmt.Errorf("%s: %w", p, err)
+		}
+		if err := pk.Validate(); err != nil {
 			return fmt.Errorf("%s: %w", p, err)
 		}
 		packs = append(packs, pk)
@@ -108,6 +164,9 @@ func LoadPacks(dir string) ([]Pack, error) {
 		}
 		var pk Pack
 		if err := yaml.Unmarshal(b, &pk); err != nil {
+			return nil, fmt.Errorf("%s: %w", f, err)
+		}
+		if err := pk.Validate(); err != nil {
 			return nil, fmt.Errorf("%s: %w", f, err)
 		}
 		// A local pack with the same id replaces the built-in one.
@@ -191,6 +250,52 @@ func Run(s *model.Snapshot, packs []Pack) []Hit {
 					for _, run := range r.Runs {
 						if m(in.Pattern, run.WorkflowPath) {
 							add(p, in, r.FullName, fmt.Sprintf("run #%d of %s on %s", run.RunNumber, run.WorkflowPath, run.HeadBranch), run.CreatedAt)
+						}
+					}
+				}
+			case "workflow_endpoint":
+				for _, r := range s.Repos {
+					for _, w := range r.Workflows {
+						for _, e := range w.Endpoints {
+							if m(in.Pattern, e) {
+								add(p, in, r.FullName, fmt.Sprintf("workflow %s contacts %s", w.Path, e), time.Time{})
+							}
+						}
+					}
+				}
+			case "workflow_secrets_dump":
+				for _, r := range s.Repos {
+					for _, w := range r.Workflows {
+						for _, j := range w.Jobs {
+							if j.DumpsSecrets {
+								add(p, in, r.FullName, fmt.Sprintf("workflow %s job %s serialises the whole secrets/vars context", w.Path, j.ID), time.Time{})
+							}
+						}
+					}
+				}
+			case "cloudtrail_session_name":
+				for _, e := range s.CloudTrail {
+					if e.SessionName != "" && m(in.Pattern, e.SessionName) {
+						add(p, in, "", fmt.Sprintf("%s %s assumed %s with session %q (sub %s)", e.Time.Format(time.RFC3339), e.SourceIP, e.RoleARN, e.SessionName, e.Subject), e.Time)
+					}
+				}
+				for _, e := range s.CloudTrailEvents {
+					if e.SessionName != "" && m(in.Pattern, e.SessionName) {
+						add(p, in, "", fmt.Sprintf("%s %s by session %q on %s", e.Time.Format(time.RFC3339), e.EventName, e.SessionName, e.Target), e.Time)
+					}
+				}
+			case "cloudtrail_event":
+				for _, e := range s.CloudTrailEvents {
+					if !m(in.Pattern, e.EventName) || (in.Session != "" && !m(in.Session, e.SessionName)) {
+						continue
+					}
+					add(p, in, "", fmt.Sprintf("%s %s on %s by %s (ip %s)", e.Time.Format(time.RFC3339), e.EventName, e.Target, e.Principal, e.SourceIP), e.Time)
+				}
+			case "azure_audit_fic_name":
+				for _, e := range s.AzureAudit {
+					for _, n := range e.FICNames {
+						if m(in.Pattern, n) {
+							add(p, in, "", fmt.Sprintf("%s %s added federated credential %s to app %s (%s) by %s", e.Time.Format(time.RFC3339), e.Activity, n, e.AppName, e.AppID, e.Initiator), e.Time)
 						}
 					}
 				}

@@ -36,7 +36,8 @@ jobs:
           go run ./cmd/wardmap import -s examples/demo/snapshot.json -o "$RUNNER_TEMP/s.json" \
             --aws examples/demo/aws-roles.json \
             --azure examples/demo/fic-0b1c2d3e-4f50-6172-8394-a5b6c7d8e9f0.json \
-            --gcp examples/demo/gcp-providers.json --cloudtrail examples/demo/cloudtrail.json
+            --gcp examples/demo/gcp-providers.json --cloudtrail examples/demo/cloudtrail.json \
+            --azure-audit examples/demo/entra-audit.json
           go run ./cmd/wardmap scan -s "$RUNNER_TEMP/s.json" >> "$GITHUB_STEP_SUMMARY"
           go run ./cmd/wardmap hunt -s "$RUNNER_TEMP/s.json" >> "$GITHUB_STEP_SUMMARY"
 

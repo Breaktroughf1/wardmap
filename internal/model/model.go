@@ -22,7 +22,9 @@ type Snapshot struct {
 	AzureFICs    []AzureFIC    `json:"azure_federated_credentials,omitempty"`
 	GCPProviders []GCPProvider `json:"gcp_providers,omitempty"`
 
-	CloudTrail []OIDCAssumeEvent `json:"cloudtrail_oidc_events,omitempty"`
+	CloudTrail       []OIDCAssumeEvent `json:"cloudtrail_oidc_events,omitempty"`
+	CloudTrailEvents []CloudTrailEvent `json:"cloudtrail_events,omitempty"`
+	AzureAudit       []AzureAuditEvent `json:"azure_audit_events,omitempty"`
 
 	// Gaps records data that could not be collected (for example because the
 	// token lacked a scope). Analysis states these so a clean report is never
@@ -110,16 +112,22 @@ type Workflow struct {
 	// PushBranches are the branch filters on the push trigger ("*" if none).
 	PushBranches []string `json:"push_branches,omitempty"`
 	Jobs         []Job    `json:"jobs"`
-	ParseError   string   `json:"parse_error,omitempty"`
+	// Endpoints are URLs and IPv4 addresses that appear in the file, used to
+	// match exfiltration indicators.
+	Endpoints  []string `json:"endpoints,omitempty"`
+	ParseError string   `json:"parse_error,omitempty"`
 }
 
 // Job is one job inside a workflow.
 type Job struct {
-	ID           string       `json:"id"`
-	Environment  string       `json:"environment,omitempty"`
-	IDTokenWrite bool         `json:"id_token_write"`
-	SecretsUsed  []string     `json:"secrets_used,omitempty"`
-	InheritsAll  bool         `json:"secrets_inherit,omitempty"`
+	ID           string   `json:"id"`
+	Environment  string   `json:"environment,omitempty"`
+	IDTokenWrite bool     `json:"id_token_write"`
+	SecretsUsed  []string `json:"secrets_used,omitempty"`
+	InheritsAll  bool     `json:"secrets_inherit,omitempty"`
+	// DumpsSecrets is set when the job serialises the whole secrets or vars
+	// context (toJSON(secrets)), which legitimate workflows rarely do.
+	DumpsSecrets bool         `json:"dumps_secrets,omitempty"`
 	Steps        []StepUse    `json:"uses,omitempty"`
 	CloudLogins  []CloudLogin `json:"cloud_logins,omitempty"`
 	ChecksOutPR  bool         `json:"checks_out_pr_head,omitempty"`
@@ -197,12 +205,39 @@ type GCPProvider struct {
 // OIDCAssumeEvent is a CloudTrail AssumeRoleWithWebIdentity event issued from
 // a GitHub OIDC token.
 type OIDCAssumeEvent struct {
+	Time        time.Time `json:"time"`
+	RoleARN     string    `json:"role_arn"`
+	Subject     string    `json:"subject"`
+	SessionName string    `json:"session_name,omitempty"`
+	SourceIP    string    `json:"source_ip,omitempty"`
+	UserAgent   string    `json:"user_agent,omitempty"`
+	Error       string    `json:"error,omitempty"`
+}
+
+// CloudTrailEvent is any other CloudTrail management event relevant to
+// hunting (UpdateAssumeRolePolicy, CreateAccessKey, ...).
+type CloudTrailEvent struct {
+	Time        time.Time `json:"time"`
+	EventName   string    `json:"event_name"`
+	Principal   string    `json:"principal"`              // caller ARN
+	SessionName string    `json:"session_name,omitempty"` // assumed-role session name
+	Target      string    `json:"target,omitempty"`       // role or user acted on
+	SourceIP    string    `json:"source_ip,omitempty"`
+	Error       string    `json:"error,omitempty"`
+}
+
+// AzureAuditEvent is an Entra ID directory audit record that touched an
+// application's federated identity credentials.
+type AzureAuditEvent struct {
 	Time      time.Time `json:"time"`
-	RoleARN   string    `json:"role_arn"`
-	Subject   string    `json:"subject"`
-	SourceIP  string    `json:"source_ip,omitempty"`
-	UserAgent string    `json:"user_agent,omitempty"`
-	Error     string    `json:"error,omitempty"`
+	Activity  string    `json:"activity"`
+	Result    string    `json:"result,omitempty"`
+	Initiator string    `json:"initiator,omitempty"`
+	AppID     string    `json:"app_id,omitempty"`
+	AppName   string    `json:"app_name,omitempty"`
+	// FICNames are credential names found in the new values of the
+	// federated-identity-credential property.
+	FICNames []string `json:"fic_names,omitempty"`
 }
 
 // GitHubIssuer is the GitHub Actions OIDC issuer host.
