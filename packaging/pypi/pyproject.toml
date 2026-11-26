@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools==84.2.1"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "wardmap"
+version = "0.0.0"
+description = "Map what one compromised CI credential can reach: GitHub Actions secrets and AWS, Azure and GCP roles via OIDC (runs the signed Wardmap binary)"
+readme = "README.md"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+requires-python = ">=3.9"
+authors = [{ name = "Breaktrough" }]
+keywords = ["github-actions", "oidc", "ci-security", "supply-chain-security", "cloud-security", "aws-iam", "blast-radius", "incident-response", "sarif"]
+classifiers = [
+  "Environment :: Console",
+  "Operating System :: MacOS",
+  "Operating System :: POSIX :: Linux",
+  "Operating System :: Microsoft :: Windows",
+  "Topic :: Security",
+  "Topic :: Software Development :: Quality Assurance",
+]
+
+[project.urls]
+Homepage = "https://github.com/Breaktroughf1/wardmap"
+Source = "https://github.com/Breaktroughf1/wardmap"
+Issues = "https://github.com/Breaktroughf1/wardmap/issues"
+
+[project.scripts]
+wardmap = "wardmap.__main__:main"
+
+[tool.setuptools.package-data]
+wardmap = ["py.typed"]

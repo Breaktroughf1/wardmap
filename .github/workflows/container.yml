@@ -1,0 +1,100 @@
+name: container
+
+# Publishes ghcr.io/breaktroughf1/wardmap for each release. The image is
+# assembled from the release's own archives after their Sigstore signature and
+# checksums verify, so it contains exactly the published binaries. It is
+# signed with cosign (keyless) and gets SLSA build provenance. No secrets: the
+# job uses its own GITHUB_TOKEN.
+
+on:
+  workflow_run:
+    workflows: [release]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to package, e.g. v1.1.0
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  image:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write      # push to GHCR
+      id-token: write      # keyless signing and provenance
+      attestations: write
+    env:
+      IMAGE: ghcr.io/breaktroughf1/wardmap
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: sigstore/cosign-installer@756fe2d284c7292c4e9b62c8a28f1e5629c59532 # v4.1.3
+      - name: Download and verify the release archives
+        id: rel
+        env:
+          TAG: ${{ inputs.tag || github.event.workflow_run.head_branch }}
+        run: |
+          set -euo pipefail
+          if ! [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then echo "::error::unexpected tag $TAG"; exit 1; fi
+          version="${TAG#v}"
+          base="https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}"
+          mkdir -p dl
+          for f in checksums.txt checksums.txt.sigstore.json "wardmap_${version}_linux_amd64.tar.gz" "wardmap_${version}_linux_arm64.tar.gz"; do
+            curl --fail --silent --show-error --location --retry 3 --proto '=https' -o "dl/$f" "$base/$f"
+          done
+          cosign verify-blob --bundle dl/checksums.txt.sigstore.json \
+            --certificate-identity "https://github.com/${GITHUB_REPOSITORY}/.github/workflows/release.yml@refs/tags/${TAG}" \
+            --certificate-oidc-issuer https://token.actions.githubusercontent.com dl/checksums.txt
+          (cd dl && sha256sum --ignore-missing --strict -c checksums.txt)
+          for arch in amd64 arm64; do
+            mkdir -p "dist/linux_${arch}"
+            tar -xzf "dl/wardmap_${version}_linux_${arch}.tar.gz" -C "dist/linux_${arch}" wardmap
+          done
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+      - name: Build and push (linux/amd64, linux/arm64)
+        id: push
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: container/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ${{ env.IMAGE }}:${{ steps.rel.outputs.version }}
+            ${{ env.IMAGE }}:latest
+      - name: Sign the image (keyless)
+        env:
+          DIGEST: ${{ steps.push.outputs.digest }}
+        run: cosign sign --yes "${IMAGE}@${DIGEST}"
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-name: ${{ env.IMAGE }}
+          subject-digest: ${{ steps.push.outputs.digest }}
+          push-to-registry: true
+      - name: Smoke test the pushed image
+        env:
+          DIGEST: ${{ steps.push.outputs.digest }}
+          VERSION: ${{ steps.rel.outputs.version }}
+        run: |
+          out="$(docker run --rm "${IMAGE}@${DIGEST}" version)"
+          echo "$out"
+          test "$out" = "wardmap v${VERSION}"
+          cosign verify "${IMAGE}@${DIGEST}" \
+            --certificate-identity "https://github.com/${GITHUB_REPOSITORY}/.github/workflows/container.yml@${GITHUB_REF}" \
+            --certificate-oidc-issuer https://token.actions.githubusercontent.com >/dev/null
+          echo "signature verified"

@@ -1,0 +1,45 @@
+{
+  "name": "wardmap",
+  "version": "0.0.0",
+  "description": "Map what one compromised CI credential can reach: GitHub Actions secrets and AWS, Azure and GCP roles via OIDC (installs the signed Wardmap binary)",
+  "keywords": [
+    "github-actions",
+    "oidc",
+    "ci-security",
+    "supply-chain-security",
+    "cloud-security",
+    "aws-iam",
+    "blast-radius",
+    "incident-response",
+    "sarif"
+  ],
+  "homepage": "https://github.com/Breaktroughf1/wardmap",
+  "bugs": "https://github.com/Breaktroughf1/wardmap/issues",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Breaktroughf1/wardmap.git"
+  },
+  "license": "Apache-2.0",
+  "author": "Breaktrough (https://breaktroughf1.com)",
+  "bin": {
+    "wardmap": "bin/wardmap.js"
+  },
+  "files": [
+    "bin/",
+    "lib/",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "os": [
+    "darwin",
+    "linux",
+    "win32"
+  ],
+  "cpu": [
+    "x64",
+    "arm64"
+  ]
+}

@@ -1,5 +1,16 @@
 # Changelog
 
+## v1.1.0 — 2026-11-27
+
+Wardmap is now installable from every common channel, each delivering the same signed binary.
+
+- **Release archives** are built reproducibly with GoReleaser: tar.gz for Linux and macOS, zip for Windows, amd64 and arm64, plus a source archive. `checksums.txt` carries a keyless Sigstore signature (`checksums.txt.sigstore.json`), and the archives keep SLSA build provenance. Archive names change from `wardmap_vX.Y.Z_<os>_<arch>` (raw binaries) to `wardmap_X.Y.Z_<os>_<arch>.tar.gz` / `.zip`.
+- **npm** (`npx wardmap`) and **PyPI** (`uvx wardmap`, `pipx install wardmap`) packages: launchers that pin the SHA-256 values from the signature-verified checksums, download the archive for the platform on first use, refuse any mismatch, and re-check the cached binary on every run. They are tested on Linux, macOS and Windows before being published with trusted publishing (npm provenance, PyPI attestations). Launcher errors exit 2, like Wardmap's own errors.
+- **Container image** `ghcr.io/breaktroughf1/wardmap`: distroless and non-root, built from the verified archives for linux/amd64 and linux/arm64, signed with cosign and attested.
+- **Homebrew:** `brew install breaktroughf1/tap/wardmap`.
+- CI builds the archives on every push and tests both launchers, including refusal of tampered downloads and tampered cached binaries.
+- Packaging and container publishing start from the release workflow's completion (`workflow_run`), because a release created with `GITHUB_TOKEN` does not trigger other workflows.
+
 ## v1.0.1 — 2026-11-26
 
 Fail-safe hardening. A review of every path where missing data or unusual input could turn into a "safe" result found the false negatives below. Upgrading is recommended.

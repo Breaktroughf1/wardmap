@@ -60,3 +60,37 @@ jobs:
           # Code scanning is free on public repositories; private ones need
           # GitHub Code Security. Upload only where it is available.
           upload-sarif: ${{ github.event_name == 'push' && !github.event.repository.private && 'true' || 'false' }}
+
+  packaging:
+    # Builds the release archives without signing or publishing, and tests
+    # the npm and PyPI launchers against them (checksum refusal included).
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
+        with:
+          go-version-file: go.mod
+          cache: false
+      - uses: goreleaser/goreleaser-action@a4f02ab5355a589de60d917a659ce617ed19b3de # v7.3.0
+        with:
+          distribution: goreleaser
+          version: v2.20.3
+          args: release --snapshot --clean --skip=sign
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.13"
+      - name: Launcher tests
+        env:
+          WARDMAP_DIST: ${{ github.workspace }}/dist
+        run: |
+          node --test packaging/npm/test/install.test.js
+          python -B -m unittest discover -s packaging/pypi/tests -v
+      - name: Packages build
+        run: |
+          cd packaging/npm && npm pack --dry-run

@@ -36,11 +36,32 @@ All images come from the bundled **fictional** demo estate (`make demo`); no rea
 
 ## Install
 
-```bash
-go install github.com/Breaktroughf1/wardmap/cmd/wardmap@latest
-```
+| Channel | Command |
+|---|---|
+| Homebrew (macOS, Linux) | `brew install breaktroughf1/tap/wardmap` |
+| npm | `npx wardmap version` or `npm install -g wardmap` |
+| PyPI | `uvx wardmap version`, `pipx install wardmap` or `pip install wardmap` |
+| Container | `docker run --rm -v "$PWD:/src:ro" ghcr.io/breaktroughf1/wardmap run --offline --dir /src --repo your-org/your-repo` |
+| Go | `go install github.com/Breaktroughf1/wardmap/cmd/wardmap@latest` |
+| GitHub Action | see [below](#github-action) |
+| Archives | [GitHub releases](https://github.com/Breaktroughf1/wardmap/releases) |
 
-Signed binaries with build provenance are attached to each [release](https://github.com/Breaktroughf1/wardmap/releases). Verify them with `gh attestation verify <file> --repo Breaktroughf1/wardmap`.
+Every channel delivers the same signed binary (from v1.1.0):
+
+- **Release archives:** built reproducibly by GoReleaser, with a keyless Sigstore signature over `checksums.txt` and SLSA build provenance.
+- **npm and PyPI:** packages that contain no binary and run nothing at install time. On first use they download the archive for your platform, check it against SHA-256 values pinned from the signature-verified `checksums.txt`, and re-check the cached binary on every run. They are published with trusted publishing, so npm provenance and PyPI attestations are included.
+- **Container image:** assembled from the verified archives on a distroless base, signed with cosign and attested.
+- **Homebrew formula:** regenerated from the verified checksums.
+
+Verify a download yourself:
+
+```bash
+cosign verify-blob --bundle checksums.txt.sigstore.json \
+  --certificate-identity "https://github.com/Breaktroughf1/wardmap/.github/workflows/release.yml@refs/tags/vX.Y.Z" \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com checksums.txt
+sha256sum --ignore-missing -c checksums.txt
+gh attestation verify wardmap_X.Y.Z_linux_amd64.tar.gz --repo Breaktroughf1/wardmap
+```
 
 ## Quick start
 

@@ -1,0 +1,71 @@
+# GoReleaser v2 configuration. Builds are reproducible: CGO disabled,
+# -trimpath, and file timestamps fixed to the commit time.
+version: 2
+project_name: wardmap
+
+builds:
+  - id: wardmap
+    main: ./cmd/wardmap
+    binary: wardmap
+    env:
+      - CGO_ENABLED=0
+    goos: [linux, darwin, windows]
+    goarch: [amd64, arm64]
+    flags:
+      - -trimpath
+    ldflags:
+      # The tag (vX.Y.Z), so `wardmap version` prints the same as before.
+      - -s -w -X main.version={{ .Tag }}
+    mod_timestamp: "{{ .CommitTimestamp }}"
+
+archives:
+  - id: default
+    formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - LICENSE
+      - README.md
+    builds_info:
+      mtime: "{{ .CommitDate }}"
+
+checksum:
+  name_template: checksums.txt
+  algorithm: sha256
+
+# Keyless Sigstore signature over checksums.txt (verifies every archive).
+signs:
+  - id: cosign
+    artifacts: checksum
+    cmd: cosign
+    signature: "${artifact}.sigstore.json"
+    args:
+      - sign-blob
+      - --bundle=${signature}
+      - ${artifact}
+      - --yes
+
+source:
+  enabled: true
+  name_template: "{{ .ProjectName }}_{{ .Version }}_source"
+
+release:
+  github:
+    owner: Breaktroughf1
+    name: wardmap
+  prerelease: auto
+  footer: |
+    Verify a download:
+    ```sh
+    cosign verify-blob --bundle checksums.txt.sigstore.json \
+      --certificate-identity "https://github.com/Breaktroughf1/wardmap/.github/workflows/release.yml@refs/tags/{{ .Tag }}" \
+      --certificate-oidc-issuer https://token.actions.githubusercontent.com checksums.txt
+    sha256sum --ignore-missing -c checksums.txt
+    gh attestation verify wardmap_{{ .Version }}_linux_amd64.tar.gz --repo Breaktroughf1/wardmap
+    ```
+
+changelog:
+  # Release notes come from CHANGELOG.md (--release-notes in release.yml).
+  disable: true
