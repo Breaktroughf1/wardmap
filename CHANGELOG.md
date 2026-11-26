@@ -1,5 +1,21 @@
 # Changelog
 
+## v1.0.0 — 2026-12-02
+
+First stable release.
+
+### Stability promises (until v2)
+
+- Snapshot schema version 1 stays readable; new fields are additive.
+- Rule IDs `WM001`–`WM018` keep their meaning, and SARIF `partialFingerprints` stay stable, so baselines and code-scanning alerts carry over.
+- CLI exit codes: `0` ok, `1` threshold exceeded or new reach, `2` error.
+- IOC packs keep shipping as data, with a version per pack.
+
+### Added since v0.9.0
+
+- Launch kit in `docs/launch/`: release checklist, Marketplace listing, blog post, launch posts, pre-brief messages and the CI-to-cloud trust review one-pager.
+- Issue templates for bugs, false positives and IOC pack updates. Security issues and false negatives go to private vulnerability reporting.
+
 ## v0.9.0 — 2026-11-26
 
 First public pre-release, cut to prove the release pipeline (signed build provenance, checksums) before v1.0.0.

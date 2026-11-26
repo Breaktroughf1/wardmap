@@ -12,3 +12,10 @@ make lint test fuzz
 ```
 
 Pin any new GitHub Action to a full commit SHA with a version comment. Dependabot keeps them current with a 7-day cooldown.
+
+## Releasing
+
+1. Add a `## vX.Y.Z — YYYY-MM-DD` section at the top of `CHANGELOG.md` and merge it.
+2. A maintainer pushes the tag: `git tag -a vX.Y.Z -m "Wardmap vX.Y.Z" && git push origin vX.Y.Z`.
+
+The release workflow builds and attests the binaries, then publishes the release with that CHANGELOG section as notes. `v0.*` and suffixed versions become pre-releases. See `docs/launch/RELEASE.md`.

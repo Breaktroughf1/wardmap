@@ -1,0 +1,23 @@
+name: False positive
+description: Wardmap reported something reachable, or a finding, that is not
+labels: [false-positive]
+body:
+  - type: input
+    id: rule
+    attributes:
+      label: Rule or indicator
+      placeholder: WM003 / wfx-commit-cleanup
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why it is not reachable or not applicable
+      description: For example, a branch ruleset blocks branch creation, or the role has a Deny for this subject.
+    validations:
+      required: true
+  - type: textarea
+    id: input
+    attributes:
+      label: Redacted trust condition, workflow or claims
+      render: json

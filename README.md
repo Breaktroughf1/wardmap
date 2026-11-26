@@ -130,6 +130,7 @@ See [docs/positioning.md](docs/positioning.md) for detail.
 - [Token permissions](docs/permissions.md)
 - [IOC packs](docs/ioc-packs.md)
 - [Project plan](docs/PLAN.md)
+- [Release and launch checklist](docs/launch/RELEASE.md)
 
 ## Limits (read before trusting a clean report)
 

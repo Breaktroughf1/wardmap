@@ -1,0 +1,35 @@
+name: Bug report
+description: Something crashed, failed, or produced wrong output
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        If a cloud identity was reported **not reachable** but is reachable, do not file it here. Use private vulnerability reporting (see SECURITY.md); we treat false negatives as security bugs.
+        Never paste secret values, tokens or unredacted snapshots.
+  - type: input
+    id: version
+    attributes:
+      label: wardmap version
+      description: Output of `wardmap version`
+    validations:
+      required: true
+  - type: input
+    id: command
+    attributes:
+      label: Command
+      placeholder: wardmap scan -s snapshot.json --format sarif
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: input
+    attributes:
+      label: Minimal redacted input
+      description: A trimmed workflow, trust policy or snapshot fragment that reproduces it, with account IDs and names replaced.
+      render: json

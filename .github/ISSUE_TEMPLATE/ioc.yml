@@ -1,0 +1,24 @@
+name: IOC pack update
+description: New indicator, correction, or primary-source verification
+labels: [ioc-pack]
+body:
+  - type: input
+    id: pack
+    attributes:
+      label: Pack and indicator
+      placeholder: wfx-loot / wfx-commit-helper (or "new")
+    validations:
+      required: true
+  - type: textarea
+    id: change
+    attributes:
+      label: Proposed change
+      description: Indicator type, pattern, confidence, and why.
+    validations:
+      required: true
+  - type: input
+    id: source
+    attributes:
+      label: Source (prefer the researchers' original write-up)
+    validations:
+      required: true

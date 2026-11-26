@@ -43,6 +43,19 @@ Today is day 0 (Thu 26 Nov 2026). The launch is day 6 (Wed 2 Dec), avoiding a Fr
 - Following reusable workflows across repositories
 - GitLab support
 
+### Status (26 Nov 2026)
+
+| Day | Status |
+|---|---|
+| 0 | Done: engine, rules, Action, CI, docs. |
+| 1 | **Partly done.** Live collection tested against GitHub on this repository; it worked, and the report issues it exposed are fixed. **Waiting on the owner:** scanning your own org (the build session can only reach this repository), scans of design-partner orgs, private vulnerability reporting, and the trademark search. |
+| 2 | Done: IOC packs 2026.11.26.2, Entra audit import, CloudTrail persistence events. **Open:** checking indicators against the researchers' original posts. |
+| 3 | Done: demo screenshots of the fictional estate in `docs/img/`. |
+| 4 | **Prepared:** v0.9.0 CHANGELOG and release notes on `main`. **Waiting on the owner:** pushing the tag (the build session may not push tags); Marketplace listing text is in `docs/launch/marketplace.md`. |
+| 5 | Done: blog post, launch posts and pre-brief messages in `docs/launch/`. **Waiting on the owner:** sending and publishing them. |
+| 6 | **Prepared:** v1.0.0 CHANGELOG with stability promises; release checklist in `docs/launch/RELEASE.md`. **Waiting on the owner:** tag and posts. |
+| 7 | Done: issue templates for triage. No issues or pull requests are open yet. |
+
 ## 3. Honest re-scoring
 
 | Candidate | Urgency | Gap vs OSS | Fit | 1-week feasibility | Visibility | Business value | Synergy | **Total /35** |
