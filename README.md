@@ -25,6 +25,16 @@ reachable    write@example-org/website -> aws-role:arn:aws:iam::111122223333:rol
              via any unprotected branch (new branch + new workflow) (admitted by StringLike sub [repo:example-org/*])
 ```
 
+## What it looks like
+
+All images come from the bundled **fictional** demo estate (`make demo`); no real organisation's data is shown.
+
+| Reach graph and findings | Incident hunt |
+|---|---|
+| [![wardmap scan](docs/img/scan.png)](docs/img/scan.png) | [![wardmap hunt](docs/img/hunt.png)](docs/img/hunt.png) |
+| **Who can reach a role** | **Ordered rotation runbook** |
+| [![wardmap reach](docs/img/reach.png)](docs/img/reach.png) | [![wardmap rotate-plan](docs/img/rotate-plan.png)](docs/img/rotate-plan.png) |
+
 ## Install
 
 ```bash

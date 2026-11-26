@@ -69,6 +69,9 @@ func Markdown(w io.Writer, res analysis.Result, title string) {
 		froms = append(froms, f)
 	}
 	sort.Strings(froms)
+	if len(froms) == 0 {
+		fmt.Fprint(w, "No secrets or cloud identities were found reachable in the collected data.\n\n")
+	}
 	for _, f := range froms {
 		fmt.Fprintf(w, "### `%s`\n\n| Reaches | Kind | Via | Verdict |\n|---|---|---|---|\n", f)
 		for _, e := range byFrom[f] {
@@ -77,10 +80,23 @@ func Markdown(w io.Writer, res analysis.Result, title string) {
 		fmt.Fprintln(w)
 	}
 	fmt.Fprint(w, "## Findings\n\n")
-	if len(res.Findings) == 0 {
-		fmt.Fprintln(w, "No findings.")
+	shown := 0
+	for _, f := range res.Findings {
+		if !(f.RuleID == "WM016" && strings.HasPrefix(f.Message, "Collection gap:")) {
+			shown++
+		}
+	}
+	if shown == 0 {
+		if len(res.Gaps) > 0 {
+			fmt.Fprintln(w, "No findings in the data that could be collected; see the collection gaps below.")
+		} else {
+			fmt.Fprintln(w, "No findings.")
+		}
 	}
 	for _, f := range res.Findings {
+		if f.RuleID == "WM016" && strings.HasPrefix(f.Message, "Collection gap:") {
+			continue // listed once under "Collection gaps"
+		}
 		loc := f.Repo
 		if f.Path != "" {
 			loc += "/" + f.Path
@@ -88,18 +104,22 @@ func Markdown(w io.Writer, res analysis.Result, title string) {
 		if loc != "" {
 			loc = " — `" + loc + "`"
 		}
-		fmt.Fprintf(w, "- **%s** `%s`%s: %s\n", strings.ToUpper(f.SeverityStr), f.RuleID, loc, f.Message)
+		fmt.Fprintf(w, "- **%s** `%s`%s: %s\n", strings.ToUpper(f.SeverityStr), f.RuleID, loc, esc(f.Message))
 	}
 	if len(res.Gaps) > 0 {
 		fmt.Fprint(w, "\n## Collection gaps\n\n")
 		for _, g := range res.Gaps {
-			fmt.Fprintf(w, "- %s\n", g)
+			fmt.Fprintf(w, "- %s\n", esc(g))
 		}
 	}
 	fmt.Fprintln(w, "\n---\nWardmap is read-only and never reads secret values. It reports exposure, not compromise; use `wardmap hunt` for indicators of compromise.")
 }
 
-func esc(s string) string { return strings.ReplaceAll(s, "|", "\\|") }
+// esc makes free text safe inside Markdown: table pipes and emphasis
+// markers (ARNs and policies contain "*") are escaped.
+func esc(s string) string {
+	return strings.NewReplacer("|", "\\|", "*", "\\*", "_", "\\_").Replace(s)
+}
 
 // JSON writes v as indented JSON.
 func JSON(w io.Writer, v any) error {
@@ -151,7 +171,7 @@ func HuntMarkdown(w io.Writer, hits []hunt.Hit, packs []hunt.Pack) {
 	fmt.Fprint(w, "# Wardmap hunt\n\n")
 	var names []string
 	for _, p := range packs {
-		names = append(names, fmt.Sprintf("%s@%s", p.ID, p.Version))
+		names = append(names, fmt.Sprintf("`%s@%s`", p.ID, p.Version))
 	}
 	fmt.Fprintf(w, "IOC packs: %s\n\n", strings.Join(names, ", "))
 	if len(hits) == 0 {
@@ -168,3 +188,6 @@ func HuntMarkdown(w io.Writer, hits []hunt.Hit, packs []hunt.Pack) {
 	}
 	fmt.Fprintln(w, "\nNext steps: run `wardmap rotate-plan --repo <affected>` for an ordered rotation runbook. Indicators are hunting leads; confirm each before acting.")
 }
+
+// Escape is esc for callers outside this package.
+func Escape(s string) string { return esc(s) }

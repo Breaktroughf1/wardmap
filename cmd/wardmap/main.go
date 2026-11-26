@@ -14,6 +14,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"runtime/debug"
 	"sort"
 	"strconv"
 	"strings"
@@ -28,8 +29,18 @@ import (
 	"github.com/Breaktroughf1/wardmap/internal/workflow"
 )
 
-// version is set at build time with -ldflags "-X main.version=...".
+// version is set at build time with -ldflags "-X main.version=..."; for
+// `go install module@vX.Y.Z` builds it falls back to the module version.
 var version = "dev"
+
+func init() {
+	if version != "dev" {
+		return
+	}
+	if bi, ok := debug.ReadBuildInfo(); ok && bi.Main.Version != "" && bi.Main.Version != "(devel)" {
+		version = bi.Main.Version
+	}
+}
 
 const usage = `wardmap — map your CI's blast radius
 
@@ -240,7 +251,7 @@ func run(ctx context.Context, args []string, stdout, stderr io.Writer) (int, err
 			}
 			fmt.Fprint(w, "# Rotation runbook\n\nWork top to bottom. Close cloud persistence before rotating, or a new secret can be stolen again.\n\n| # | Phase | Target | Action |\n|---|---|---|---|\n")
 			for _, p := range plan {
-				fmt.Fprintf(w, "| %d | %s | `%s` | %s |\n", p.Order, p.Phase, p.Target, strings.ReplaceAll(p.Action, "|", "\\|"))
+				fmt.Fprintf(w, "| %d | %s | `%s` | %s |\n", p.Order, p.Phase, p.Target, report.Escape(p.Action))
 			}
 			if len(plan) == 0 {
 				fmt.Fprintln(w, "\nNothing reachable from the selected repositories.")

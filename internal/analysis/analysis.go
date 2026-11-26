@@ -146,7 +146,7 @@ func (a *analyzer) run() {
 	a.workflowRules()
 	a.secretHygiene()
 	for _, g := range a.s.Gaps {
-		a.add("WM016", Info, "", "", g, "Collection gap: "+g+". Results for the affected scope are incomplete.")
+		a.add("WM016", Info, "", "", g, "Collection gap: "+strings.TrimRight(g, ". ")+". Results for the affected scope are incomplete.")
 	}
 }
 
