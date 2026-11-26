@@ -1,9 +1,8 @@
 # Wardmap
 
 [![ci](https://github.com/Breaktroughf1/wardmap/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Breaktroughf1/wardmap/actions/workflows/ci.yml)
+[![release](https://img.shields.io/github/v/release/Breaktroughf1/wardmap?sort=semver)](https://github.com/Breaktroughf1/wardmap/releases)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
-
-> **Pre-release.** v1.0 is planned for 2 December 2026. Interfaces and the snapshot format may still change. Reports of false negatives in trust evaluation are especially welcome: see [SECURITY.md](SECURITY.md).
 
 **Map what one compromised CI credential can reach.**
 
@@ -131,6 +130,8 @@ See [docs/positioning.md](docs/positioning.md) for detail.
 - [IOC packs](docs/ioc-packs.md)
 - [Project plan](docs/PLAN.md)
 - [Release and launch checklist](docs/launch/RELEASE.md)
+
+Found a false negative (Wardmap said "not reachable" but it is)? Report it privately; see [SECURITY.md](SECURITY.md).
 
 ## Limits (read before trusting a clean report)
 

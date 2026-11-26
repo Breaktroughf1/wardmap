@@ -2,7 +2,7 @@
 
 Pushing tags is the maintainer's job. Run these from your own machine, in a clone of this repository.
 
-## 1. Cut v0.9.0 (proves the pipeline)
+## 1. Cut v0.9.0 (proves the pipeline) ✅ done 26 Nov 2026: published as a pre-release; attestation verified
 
 `v0.9.0` is the commit "Release v0.9.0" on `main` (`a0b3847`).
 
@@ -34,7 +34,7 @@ gh attestation verify wardmap_v0.9.0_darwin_arm64 --repo Breaktroughf1/wardmap &
 - [ ] Run a live scan on your own org and fix anything it shows: `wardmap collect --org Breaktroughf1 --hunt`.
 - [ ] Scan 2–3 design-partner orgs, with their written consent. Only anonymised aggregates go into the blog post.
 - [ ] Turn on private vulnerability reporting: Settings → Code security.
-- [ ] Do a trademark search for "Wardmap".
+- [x] Do a trademark search for "Wardmap". Preliminary desk search done (docs/launch/name-check.md); a lawyer still needs to clear it, because WORDMAP is a close live US mark.
 - [ ] Optionally, check the IOC packs against the primary posts and set `verified: primary` where they match.
 
 ## 3. Cut v1.0.0

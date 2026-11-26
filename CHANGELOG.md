@@ -1,6 +1,6 @@
 # Changelog
 
-## v1.0.0 — 2026-12-02
+## v1.0.0 — 2026-11-26
 
 First stable release.
 
@@ -15,6 +15,8 @@ First stable release.
 
 - Launch kit in `docs/launch/`: release checklist, Marketplace listing, blog post, launch posts, pre-brief messages and the CI-to-cloud trust review one-pager.
 - Issue templates for bugs, false positives and IOC pack updates. Security issues and false negatives go to private vulnerability reporting.
+- Release v0.9.0 verified end to end: `gh attestation verify` passes on the published binaries.
+- Preliminary name check recorded in `docs/launch/name-check.md`.
 
 ## v0.9.0 — 2026-11-26
 
