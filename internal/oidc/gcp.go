@@ -11,7 +11,13 @@ import (
 // condition. It understands the CEL subset used in practice for GitHub:
 // ==, !=, &&, ||, !, parentheses, `x in ['a','b']`, startsWith and endsWith
 // on assertion.* or mapped attribute.* values. Anything else yields Unknown.
-func EvaluateGCP(p model.GCPProvider, c Candidate) Result {
+func EvaluateGCP(p model.GCPProvider, c Candidate) (res Result) {
+	// Fail safe: a parser bug must never crash a scan or read as "safe".
+	defer func() {
+		if r := recover(); r != nil {
+			res = Result{Unknown, fmt.Sprintf("attribute condition could not be evaluated (internal error: %v)", r)}
+		}
+	}()
 	if p.Disabled {
 		return Result{NotReachable, "provider disabled"}
 	}
@@ -27,8 +33,10 @@ func EvaluateGCP(p model.GCPProvider, c Candidate) Result {
 	}
 	ps := &celParser{toks: toks, mapping: p.AttributeMapping, cand: c}
 	v, err := ps.parseOr()
-	if err == nil && ps.pos != len(ps.toks) {
+	if err == nil && ps.pos < len(ps.toks) {
 		err = fmt.Errorf("unexpected token %q", ps.toks[ps.pos].v)
+	} else if err == nil && ps.pos > len(ps.toks) {
+		err = fmt.Errorf("unexpected end of condition")
 	}
 	if err != nil {
 		return Result{Unknown, "attribute condition not understood (" + err.Error() + ")"}
@@ -323,7 +331,12 @@ func (p *celParser) parsePrimary(neg bool) (tri, error) {
 			return p.cmp(claim, escapeCEL(t.v), n), nil
 		}
 		if p.pos < len(p.toks) && p.toks[p.pos].k == "ident" && p.toks[p.pos].v == "in" {
-			p.pos += 2
+			// 'literal' in <list-valued claim>: not evaluated.
+			p.pos++
+			if p.pos >= len(p.toks) || p.toks[p.pos].k != "ident" {
+				return 0, fmt.Errorf("'in' needs a list-valued attribute")
+			}
+			p.pos++
 			return triUnknown, nil
 		}
 	}

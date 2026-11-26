@@ -138,7 +138,13 @@ func DecodePolicy(v any) (map[string]any, error) {
 }
 
 // Evaluate decides whether candidate c can assume the role.
-func (t AWSTrust) Evaluate(c Candidate) Result {
+func (t AWSTrust) Evaluate(c Candidate) (res Result) {
+	// Fail safe: an evaluator bug must never crash a scan or read as "safe".
+	defer func() {
+		if r := recover(); r != nil {
+			res = Result{Unknown, fmt.Sprintf("trust policy could not be evaluated (internal error: %v)", r)}
+		}
+	}()
 	if len(t.GitHub) == 0 {
 		return Result{NotReachable, "role does not trust GitHub OIDC"}
 	}

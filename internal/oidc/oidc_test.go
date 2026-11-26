@@ -233,6 +233,18 @@ func TestTemplateProbe(t *testing.T) {
 	}
 }
 
+func TestGCPMalformedNeverPanicsOrPasses(t *testing.T) {
+	cs := Candidates(repo())
+	for _, cond := range []string{"'x' in", "'x' in 'y'", "assertion.repository ==", "!(", "!(assertion.ref == 'a'", "(((", "assertion.ref.startsWith(", "'a' == "} {
+		p := model.GCPProvider{IssuerURI: "https://token.actions.githubusercontent.com", AttributeCondition: cond}
+		for _, c := range cs {
+			if v := EvaluateGCP(p, c).Verdict; v == NotReachable {
+				t.Errorf("%q: malformed condition must not read as not reachable", cond)
+			}
+		}
+	}
+}
+
 func FuzzAWSTrust(f *testing.F) {
 	f.Add(`{"Statement":[{"Effect":"Allow",` + ghPrincipal + `,"Condition":{"StringLike":{"token.actions.githubusercontent.com:sub":"repo:a/*"}}}]}`)
 	f.Add(`{"Statement":{"Effect":"Allow","Principal":"*","Action":["sts:*"],"Condition":{"Null":{"x":"true"}}}}`)

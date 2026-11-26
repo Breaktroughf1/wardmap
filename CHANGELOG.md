@@ -10,6 +10,10 @@ Fail-safe hardening. A review of every path where missing data or unusual input 
 - `...IfExists` condition operators now pass when the token lacks the claim, as IAM does. Previously `StringEqualsIfExists` on `environment` made branch tokens look rejected.
 - If a repository's custom OIDC subject template cannot be read, Wardmap no longer assumes the default: it records a gap and reports any trust that mentions the repository as needing review.
 
+### Fixed (robustness)
+
+- Fuzzing found a crash in the GCP attribute-condition parser on malformed input such as `'x' in`. It is fixed, and both trust evaluators now turn any internal error into *needs review* instead of crashing the scan.
+
 ### Changed (fail closed)
 
 - WM014 *trust-needs-review* is now **high** severity (was low), so `--fail-on high` no longer passes undecidable trust.
