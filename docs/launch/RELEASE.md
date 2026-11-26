@@ -41,10 +41,10 @@ gh attestation verify wardmap_v0.9.0_darwin_arm64 --repo Breaktroughf1/wardmap &
 
 ## 3a. Cut v1.0.1 (fail-safe hardening; use this for launch)
 
-The release commit is "Release v1.0.1: fail-safe hardening" (`4c7edfa`). The README and Marketplace snippets already pin it.
+The release commit is "Fix GCP condition parser crash found by fuzzing…" (`6fec809`). The README and Marketplace snippets already pin it.
 
 ```bash
-git pull && git tag -a v1.0.1 4c7edfaf264d192ed9629bb81be5b6cdc9015c9c -m "Wardmap v1.0.1" && git push origin v1.0.1
+git pull && git tag -a v1.0.1 6fec809d67e2b48da268d022b753fb3087318a88 -m "Wardmap v1.0.1" && git push origin v1.0.1
 ```
 
 After the release is published (about 2 minutes):

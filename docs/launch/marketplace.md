@@ -26,10 +26,10 @@ permissions:
 steps:
   - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
     with: { persist-credentials: false }
-  - uses: Breaktroughf1/wardmap@4c7edfaf264d192ed9629bb81be5b6cdc9015c9c # v1.0.1
+  - uses: Breaktroughf1/wardmap@6fec809d67e2b48da268d022b753fb3087318a88 # v1.0.1
     with:
       mode: offline
       fail-on: high
 ```
 
-`4c7edfaf264d192ed9629bb81be5b6cdc9015c9c` is the commit the v1.0.1 tag points to; README.md uses the same pin.
+`6fec809d67e2b48da268d022b753fb3087318a88` is the commit the v1.0.1 tag points to; README.md uses the same pin.
