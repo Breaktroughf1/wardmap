@@ -12,6 +12,12 @@ GitHub's default `sub` claim includes immutable IDs (`repo:OWNER@ID/REPO@ID:…`
 
 **Upgrading is strongly recommended.**
 
+### Added
+
+- `wardmap demo`: scan and hunt a built-in fictional estate from any install, with no token and no clone.
+- `--format html`: a single self-contained report for security leads and auditors. It has no external assets, supports dark mode and prints cleanly to PDF.
+- `import --terraform`: reads AWS role trust policies, Entra federated credentials and GCP workload identity providers from `terraform show -json` output (plan or state), for teams that manage trust as code.
+
 ### Fixed: branch protection that does not stop a write credential (false negative)
 
 Earlier versions trusted GitHub's `protected` flag. That flag is also set when a branch only requires status checks, and an attacker with write access can open a pull request and merge it into such a branch. A branch now counts as protected only when an active ruleset or classic protection requires at least one approving review, or restricts updates. If that cannot be confirmed, Wardmap treats the branch as weak (fail safe).

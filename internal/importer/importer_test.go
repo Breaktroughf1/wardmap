@@ -90,3 +90,24 @@ func TestAzureAudit(t *testing.T) {
 		t.Error("non-audit JSON should be an error")
 	}
 }
+
+func TestTerraform(t *testing.T) {
+	roles, fics, gcp, err := Terraform(demo + "terraform-plan.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(roles) != 1 || roles[0].ARN != "terraform:aws_iam_role.deploy" || roles[0].TrustPolicy["Statement"] == nil {
+		t.Fatalf("roles: %+v", roles)
+	}
+	if len(fics) != 1 || fics[0].Name != "gh-main" || fics[0].Subject == "" {
+		t.Fatalf("fics: %+v", fics)
+	}
+	if len(gcp) != 1 || gcp[0].Name != "terraform:module.idp.google_iam_workload_identity_pool_provider.gh" || gcp[0].IssuerURI == "" {
+		t.Fatalf("gcp: %+v", gcp)
+	}
+	bad := filepath.Join(t.TempDir(), "x.json")
+	_ = os.WriteFile(bad, []byte(`{"foo":1}`), 0o600)
+	if _, _, _, err := Terraform(bad); err == nil {
+		t.Error("non-terraform JSON must be an error")
+	}
+}

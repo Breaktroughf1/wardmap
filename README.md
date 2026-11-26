@@ -65,10 +65,10 @@ gh attestation verify wardmap_X.Y.Z_linux_amd64.tar.gz --repo Breaktroughf1/ward
 
 ## Quick start
 
-Try it on the bundled fictional estate (no token needed):
+See it work in ten seconds on a built-in fictional estate (no token, no clone):
 
 ```bash
-make demo
+npx wardmap demo                          # or: wardmap demo --format html -o wardmap-demo.html
 ```
 
 Scan your own organisation:
@@ -81,6 +81,7 @@ wardmap collect --org your-org --hunt -o snapshot.json
 aws iam list-roles > aws.json
 az ad app federated-credential list --id "$APP_ID" > "fic-$APP_ID.json"
 gcloud iam workload-identity-pools providers list --workload-identity-pool=POOL --location=global --format=json > gcp.json
+terraform show -json > tf.json   # or use your Terraform instead of live exports
 aws cloudtrail lookup-events --lookup-attributes AttributeKey=EventName,AttributeValue=AssumeRoleWithWebIdentity > ct.json
 aws cloudtrail lookup-events --lookup-attributes AttributeKey=EventName,AttributeValue=UpdateAssumeRolePolicy > ct-trust.json
 az rest --method get --url "https://graph.microsoft.com/v1.0/auditLogs/directoryAudits?\$filter=activityDisplayName eq 'Update application'" > entra-audit.json
@@ -100,8 +101,9 @@ No token at all? `wardmap local --dir .` scans the workflows in a checkout.
 |---|---|
 | `collect` | Read-only GitHub collection into a snapshot (`--hunt` adds PRs, commits, runs) |
 | `local` | Offline snapshot from workflows on disk |
-| `import` | Add AWS, Azure, GCP, CloudTrail and Entra audit-log exports to a snapshot |
-| `scan` | Reach graph and 21 rules; `md`, `json`, `sarif`, `mermaid`, `dot` |
+| `import` | Add AWS, Azure, GCP, Terraform (`terraform show -json`), CloudTrail and Entra audit-log exports to a snapshot |
+| `scan` | Reach graph and 21 rules; `md`, `html` (self-contained, printable), `json`, `sarif`, `mermaid`, `dot` |
+| `demo` | The whole pipeline on a built-in fictional estate (`--format html` for the report) |
 | `reach QUERY` | Who can reach a secret, role, environment or repository |
 | `baseline` / `scan --baseline` | Approve today's reach; fail CI on *new* reach or findings |
 | `hunt` | Match versioned IOC packs; run-number gaps; OIDC sessions from deleted branches; trust rewrites and backdoor credentials in CloudTrail and Entra audit logs |

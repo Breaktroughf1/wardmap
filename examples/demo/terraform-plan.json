@@ -1,0 +1,68 @@
+{
+  "format_version": "1.2",
+  "planned_values": {
+    "root_module": {
+      "resources": [
+        {
+          "address": "aws_iam_role.deploy",
+          "mode": "managed",
+          "type": "aws_iam_role",
+          "name": "deploy",
+          "values": {
+            "name": "deploy",
+            "assume_role_policy": "{\"Version\": \"2012-10-17\", \"Statement\": [{\"Effect\": \"Allow\", \"Principal\": {\"Federated\": \"arn:aws:iam::111122223333:oidc-provider/token.actions.githubusercontent.com\"}, \"Action\": \"sts:AssumeRoleWithWebIdentity\", \"Condition\": {\"StringLike\": {\"token.actions.githubusercontent.com:sub\": \"repo:example-org/*\"}}}]}"
+          }
+        },
+        {
+          "address": "aws_s3_bucket.x",
+          "mode": "managed",
+          "type": "aws_s3_bucket",
+          "name": "x",
+          "values": {
+            "bucket": "x"
+          }
+        }
+      ],
+      "child_modules": [
+        {
+          "address": "module.idp",
+          "resources": [
+            {
+              "address": "module.idp.azuread_application_federated_identity_credential.gh",
+              "mode": "managed",
+              "type": "azuread_application_federated_identity_credential",
+              "name": "gh",
+              "values": {
+                "display_name": "gh-main",
+                "issuer": "https://token.actions.githubusercontent.com",
+                "subject": "repo:example-org/api:ref:refs/heads/main",
+                "audiences": [
+                  "api://AzureADTokenExchange"
+                ],
+                "application_id": "/applications/0b1c"
+              }
+            },
+            {
+              "address": "module.idp.google_iam_workload_identity_pool_provider.gh",
+              "mode": "managed",
+              "type": "google_iam_workload_identity_pool_provider",
+              "name": "gh",
+              "values": {
+                "workload_identity_pool_provider_id": "github",
+                "attribute_condition": "",
+                "attribute_mapping": {
+                  "google.subject": "assertion.sub"
+                },
+                "oidc": [
+                  {
+                    "issuer_uri": "https://token.actions.githubusercontent.com"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

@@ -166,3 +166,18 @@ func TestFailSafeExitCodes(t *testing.T) {
 		t.Errorf("hunt must list unchecked sources:\n%s", out)
 	}
 }
+
+func TestDemoCommandAndHTML(t *testing.T) {
+	code, out := wm(t, "demo")
+	if code != 0 || !strings.Contains(out, "Wardmap demo") || !strings.Contains(out, "wfx-entra-audit") {
+		t.Fatalf("demo: %d\n%s", code, out[:min(len(out), 400)])
+	}
+	code, html := wm(t, "demo", "--format", "html")
+	if code != 0 || !strings.HasPrefix(html, "<!doctype html>") || !strings.Contains(html, "Indicators of compromise") || strings.Contains(html, "<script") {
+		t.Fatalf("demo html: %d", code)
+	}
+	s := demoSnapshot(t)
+	if code, out := wm(t, "scan", "-s", s, "--format", "html"); code != 0 || !strings.Contains(out, "Blast radius per repository") {
+		t.Errorf("scan html: %d", code)
+	}
+}

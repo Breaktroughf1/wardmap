@@ -14,12 +14,14 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"runtime/debug"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
 
+	demoestate "github.com/Breaktroughf1/wardmap/examples/demo"
 	"github.com/Breaktroughf1/wardmap/internal/analysis"
 	gh "github.com/Breaktroughf1/wardmap/internal/github"
 	"github.com/Breaktroughf1/wardmap/internal/hunt"
@@ -46,14 +48,15 @@ const usage = `wardmap — map your CI's blast radius
 
 Usage:
   wardmap collect   --org ORG | --repo OWNER/NAME... [--hunt] [-o snapshot.json]
-  wardmap import    -s snapshot.json [--aws FILE] [--azure [APPID=]FILE] [--gcp FILE] [--cloudtrail FILE] [--azure-audit FILE]
+  wardmap import    -s snapshot.json [--aws FILE] [--azure [APPID=]FILE] [--gcp FILE] [--terraform FILE] [--cloudtrail FILE] [--azure-audit FILE]
   wardmap local     [--dir .] [--repo OWNER/NAME] [-o snapshot.json]   (offline: workflows from disk)
-  wardmap scan      -s snapshot.json [--format md|json|sarif|mermaid|dot] [--fail-on SEV] [--baseline FILE] [--fail-on-gaps]
+  wardmap scan      -s snapshot.json [--format md|json|sarif|html|mermaid|dot] [--fail-on SEV] [--baseline FILE] [--fail-on-gaps]
   wardmap baseline  -s snapshot.json [-o wardmap-baseline.json]
   wardmap reach     -s snapshot.json QUERY
   wardmap hunt      -s snapshot.json [--iocs DIR] [--format md|json] [--fail-on low|medium|high]
   wardmap rotate-plan -s snapshot.json [--repo OWNER/NAME...] [--format md|json]
   wardmap run       [--offline --dir .] (collect or local + import + scan in one step)
+  wardmap demo      [--format md|html] [-o FILE]   run on a built-in fictional estate (no token, no clone)
   wardmap rules | version
 
 Authentication: WARDMAP_GITHUB_TOKEN, GITHUB_TOKEN or GH_TOKEN (read-only).
@@ -95,6 +98,7 @@ type common struct {
 	aws, gcp   multi
 	azure, ct  multi
 	azureAudit multi
+	terraform  multi
 	iocs       string
 	dir        string
 	noProgress bool
@@ -122,6 +126,7 @@ func newFlags(name string) *common {
 	c.fs.Var(&c.gcp, "gcp", "GCP providers export (repeatable)")
 	c.fs.Var(&c.ct, "cloudtrail", "CloudTrail export (repeatable)")
 	c.fs.Var(&c.azureAudit, "azure-audit", "Entra ID directory audit export (repeatable)")
+	c.fs.Var(&c.terraform, "terraform", "`terraform show -json` output (plan or state) with IAM roles, Entra credentials or GCP providers (repeatable)")
 	c.fs.StringVar(&c.iocs, "iocs", "", "directory of extra or replacement IOC packs")
 	c.fs.StringVar(&c.dir, "dir", ".", "repository checkout for `local`")
 	c.fs.BoolVar(&c.noProgress, "quiet", false, "suppress progress output")
@@ -141,6 +146,8 @@ func run(ctx context.Context, args []string, stdout, stderr io.Writer) (int, err
 	case "version":
 		fmt.Fprintln(stdout, "wardmap", version)
 		return 0, nil
+	case "demo":
+		return runDemo(args[1:], stdout, stderr)
 	case "rules":
 		for _, r := range report.Rules {
 			fmt.Fprintf(stdout, "%s  %-42s %s\n", r.ID, r.Name, r.Short)
@@ -359,6 +366,15 @@ func importInto(s *model.Snapshot, c *common) error {
 		s.CloudTrail = append(s.CloudTrail, r...)
 		s.CloudTrailEvents = append(s.CloudTrailEvents, other...)
 	}
+	for _, f := range c.terraform {
+		roles, fics, providers, err := importer.Terraform(f)
+		if err != nil {
+			return err
+		}
+		s.AWSRoles = append(s.AWSRoles, roles...)
+		s.AzureFICs = append(s.AzureFICs, fics...)
+		s.GCPProviders = append(s.GCPProviders, providers...)
+	}
 	for _, f := range c.azureAudit {
 		r, err := importer.AzureAudit(f)
 		if err != nil {
@@ -399,6 +415,12 @@ func scan(s *model.Snapshot, c *common, stdout io.Writer) (int, error) {
 			report.Mermaid(w, res)
 		case "dot":
 			report.DOT(w, res)
+		case "html":
+			title := "Wardmap report"
+			if s.Owner != "" {
+				title += ": " + s.Owner
+			}
+			return report.HTML(w, report.HTMLInput{Title: title, Version: version, Generated: time.Now(), Result: res})
 		default:
 			return fmt.Errorf("unknown format %q", c.format)
 		}
@@ -587,4 +609,49 @@ func truncate(s string, n int) string {
 		return s
 	}
 	return s[:n] + "…"
+}
+
+// runDemo analyses the embedded fictional estate: scan plus hunt.
+func runDemo(args []string, stdout, stderr io.Writer) (int, error) {
+	c := newFlags("demo")
+	c.fs.SetOutput(stderr)
+	if err := c.fs.Parse(args); err != nil {
+		return 2, err
+	}
+	dir, err := os.MkdirTemp("", "wardmap-demo-")
+	if err != nil {
+		return 2, err
+	}
+	defer os.RemoveAll(dir)
+	if err := demoestate.WriteTo(dir); err != nil {
+		return 2, err
+	}
+	s, err := readSnapshot(filepath.Join(dir, "snapshot.json"))
+	if err != nil {
+		return 2, err
+	}
+	c.aws = multi{filepath.Join(dir, "aws-roles.json")}
+	c.azure = multi{filepath.Join(dir, demoestate.AzureFile)}
+	c.gcp = multi{filepath.Join(dir, "gcp-providers.json")}
+	c.ct = multi{filepath.Join(dir, "cloudtrail.json")}
+	c.azureAudit = multi{filepath.Join(dir, "entra-audit.json")}
+	if err := importInto(s, c); err != nil {
+		return 2, err
+	}
+	res := analysis.Analyze(s, analysis.Options{StaleDays: c.staleDays})
+	packs, err := hunt.LoadPacks("")
+	if err != nil {
+		return 2, err
+	}
+	hits := hunt.Run(s, packs)
+	return 0, writeOut(c.out, stdout, func(w io.Writer) error {
+		if c.format == "html" {
+			return report.HTML(w, report.HTMLInput{Title: "Wardmap demo: example-org (fictional)", Version: version, Generated: time.Now(), Result: res, Hits: hits, HuntRun: true})
+		}
+		fmt.Fprint(w, "> Fictional demo estate built into Wardmap. Run `wardmap collect --org YOUR-ORG` for your own.\n\n")
+		report.Markdown(w, res, "Wardmap demo: example-org (fictional)")
+		fmt.Fprintln(w)
+		report.HuntMarkdown(w, hits, packs, hunt.CoverageOf(s))
+		return nil
+	})
 }
