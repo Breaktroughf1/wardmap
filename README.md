@@ -77,6 +77,7 @@ Exit codes: `0` ok, `1` threshold exceeded or new reach since baseline, `2` erro
 ```yaml
 permissions:
   contents: read
+  actions: read          # needed by the SARIF upload on private repositories
   security-events: write
 steps:
   - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
