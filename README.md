@@ -1,5 +1,10 @@
 # Wardmap
 
+[![ci](https://github.com/Breaktroughf1/wardmap/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Breaktroughf1/wardmap/actions/workflows/ci.yml)
+[![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+
+> **Pre-release.** v1.0 is planned for 2 December 2026. Interfaces and the snapshot format may still change. Reports of false negatives in trust evaluation are especially welcome: see [SECURITY.md](SECURITY.md).
+
 **Map what one compromised CI credential can reach.**
 
 Wardmap answers the question incident responders and platform teams keep scripting by hand:
