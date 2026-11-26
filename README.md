@@ -89,7 +89,7 @@ steps:
       baseline: .github/wardmap-baseline.json
 ```
 
-The Action builds Wardmap from the pinned action source; nothing is downloaded at run time. Findings appear in code scanning.
+The Action builds Wardmap from the pinned action source; nothing is downloaded at run time. Findings appear in code scanning. Code scanning is free on public repositories; private repositories need GitHub Code Security, or set `upload-sarif: false` and use the threshold gate alone.
 
 ## How it relates to other tools
 
