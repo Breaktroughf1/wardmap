@@ -1,5 +1,23 @@
 # Changelog
 
+## v1.0.1 — 2026-11-26
+
+Fail-safe hardening. A review of every path where missing data or unusual input could turn into a "safe" result found the false negatives below. Upgrading is recommended.
+
+### Fixed (false negatives)
+
+- IAM condition keys are now matched case-insensitively (`token.actions.githubusercontent.com:Sub` was previously not recognised, so the role looked unreachable).
+- `...IfExists` condition operators now pass when the token lacks the claim, as IAM does. Previously `StringEqualsIfExists` on `environment` made branch tokens look rejected.
+- If a repository's custom OIDC subject template cannot be read, Wardmap no longer assumes the default: it records a gap and reports any trust that mentions the repository as needing review.
+
+### Changed (fail closed)
+
+- WM014 *trust-needs-review* is now **high** severity (was low), so `--fail-on high` no longer passes undecidable trust.
+- Pagination limits produce an error or a collection gap instead of silently truncating results.
+- `hunt` states which sources were not checked. With `--fail-on` and no data at all it exits 2 instead of reporting a clean result.
+- New `--fail-on-gaps` flag (Action input `fail-on-gaps`, live mode) fails CI when data is incomplete.
+- New fuzz targets for the AWS trust evaluator and the GCP CEL evaluator. A fail-safe contract is documented in docs/threat-model.md.
+
 ## v1.0.0 — 2026-11-26
 
 First stable release.

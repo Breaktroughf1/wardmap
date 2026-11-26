@@ -314,6 +314,11 @@ func (a *analyzer) cloudReach() {
 					unknown = &rr
 				}
 			}
+			if hit == nil && unknown == nil && repo.OIDCSubTemplateUnknown {
+				if r := t.eval(oidc.TemplateProbe(repo)); r.Verdict != oidc.NotReachable {
+					unknown = &oidc.Result{Verdict: oidc.Unknown, Reason: "this repository's OIDC subject template could not be read, and the trust may admit it (" + r.Reason + ")"}
+				}
+			}
 			actor := ActorFor(repo.FullName)
 			switch {
 			case hit != nil:
@@ -322,7 +327,9 @@ func (a *analyzer) cloudReach() {
 					fmt.Sprintf("A write credential on %s can obtain %s %s via %s (%s). Bind the trust to a protected branch or an environment with required reviewers.", repo.FullName, t.kind, t.id, via, hit.Reason))
 			case unknown != nil:
 				a.res.Edges = append(a.res.Edges, Edge{From: actor, To: t.kind + ":" + t.id, Kind: t.kind, Via: "unevaluated condition", Verdict: "needs-review", Reason: unknown.Reason})
-				a.add("WM014", Low, repo.FullName, "", repo.FullName+"|"+t.kind+":"+t.id,
+				// Fail closed: an undecidable trust is treated as seriously as
+				// a reachable one until a person reviews it.
+				a.add("WM014", High, repo.FullName, "", repo.FullName+"|"+t.kind+":"+t.id,
 					fmt.Sprintf("Could not decide whether %s can reach %s %s: %s. Wardmap never reports this as safe; review it manually.", repo.FullName, t.kind, t.id, unknown.Reason))
 			}
 		}
@@ -334,7 +341,7 @@ var orgWideSub = regexp.MustCompile(`^repo:[^/:]+/\*`)
 func (a *analyzer) cloudLint() {
 	for _, pr := range a.aws {
 		if pr.err != nil {
-			a.add("WM014", Low, "", "", "aws-parse:"+pr.role.ARN, "Trust policy for "+pr.role.ARN+" could not be parsed: "+pr.err.Error())
+			a.add("WM014", High, "", "", "aws-parse:"+pr.role.ARN, "Trust policy for "+pr.role.ARN+" could not be parsed: "+pr.err.Error())
 			continue
 		}
 		if pr.trust.WildcardPrincipal {

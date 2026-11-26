@@ -31,6 +31,8 @@ jobs:
         run: |
           go test -run '^$' -fuzz=FuzzParse -fuzztime=30s ./internal/workflow/
           go test -run '^$' -fuzz=FuzzOverlapSelf -fuzztime=30s ./internal/glob/
+          go test -run '^$' -fuzz=FuzzAWSTrust -fuzztime=30s ./internal/oidc/
+          go test -run '^$' -fuzz=FuzzGCPCondition -fuzztime=30s ./internal/oidc/
       - name: Demo estate
         run: |
           go run ./cmd/wardmap import -s examples/demo/snapshot.json -o "$RUNNER_TEMP/s.json" \

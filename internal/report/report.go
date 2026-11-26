@@ -168,8 +168,18 @@ func DOT(w io.Writer, res analysis.Result) {
 }
 
 // HuntMarkdown writes hunting results.
-func HuntMarkdown(w io.Writer, hits []hunt.Hit, packs []hunt.Pack) {
+func HuntMarkdown(w io.Writer, hits []hunt.Hit, packs []hunt.Pack, cov hunt.Coverage) {
 	fmt.Fprint(w, "# Wardmap hunt\n\n")
+	if !cov.Anything {
+		fmt.Fprint(w, "> **Nothing to hunt in.** The snapshot holds no branches, workflows, history or cloud exports, so no indicator could be checked. Run `wardmap collect --hunt` and/or import CloudTrail and Entra exports.\n\n")
+	} else {
+		if !cov.GitHubHistory {
+			fmt.Fprint(w, "> **Not checked:** pull requests, commits and workflow runs were not collected (run `wardmap collect --hunt`), so probe PRs, inject-and-revert commits and run-number gaps could not be detected.\n\n")
+		}
+		if !cov.Cloud {
+			fmt.Fprint(w, "> **Not checked:** no CloudTrail, Entra audit or cloud trust exports were imported, so cloud persistence (wildcard trust, `wfx-ci-*` credentials, `wfx-*` sessions) could not be detected.\n\n")
+		}
+	}
 	var names []string
 	for _, p := range packs {
 		names = append(names, fmt.Sprintf("`%s@%s`", p.ID, p.Version))

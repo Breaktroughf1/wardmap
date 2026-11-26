@@ -14,6 +14,9 @@ type Snapshot struct {
 	SchemaVersion int       `json:"schema_version"`
 	CollectedAt   time.Time `json:"collected_at"`
 	Owner         string    `json:"owner,omitempty"`
+	// HuntCollected is set when pull requests, commits and workflow runs
+	// were collected (collect --hunt).
+	HuntCollected bool `json:"hunt_collected,omitempty"`
 
 	OrgSecrets []OrgSecret `json:"org_secrets,omitempty"`
 	Repos      []Repo      `json:"repos,omitempty"`
@@ -71,6 +74,10 @@ type Repo struct {
 	// OIDCSubTemplate holds include_claim_keys when the repo customises its
 	// OIDC subject; empty means the GitHub default.
 	OIDCSubTemplate []string `json:"oidc_sub_template,omitempty"`
+	// OIDCSubTemplateUnknown is set when the template could not be read.
+	// Trust that might match under some template is then reported as
+	// needing review instead of not reachable.
+	OIDCSubTemplateUnknown bool `json:"oidc_sub_template_unknown,omitempty"`
 
 	// ProtectedBranches are branches an attacker with write access cannot
 	// push to (classic protection or rulesets). Empty when unknown, which

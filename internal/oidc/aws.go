@@ -102,7 +102,8 @@ func ParseAWSTrust(doc map[string]any) (AWSTrust, error) {
 			for _, k := range keys {
 				c := awsCond{Op: op, RawKey: k, Values: asStrings(kv[k])}
 				if strings.HasPrefix(strings.ToLower(k), "token.actions.githubusercontent.com:") {
-					c.Key = k[len("token.actions.githubusercontent.com:"):]
+					// IAM condition keys are case-insensitive; claim names are lower case.
+					c.Key = strings.ToLower(k[len("token.actions.githubusercontent.com:"):])
 				}
 				s.Conditions = append(s.Conditions, c)
 			}
@@ -167,7 +168,13 @@ func (s awsStatement) evaluate(c Candidate) Result {
 		op := strings.TrimPrefix(strings.TrimPrefix(cond.Op, "ForAnyValue:"), "ForAllValues:")
 		ignoreCase := strings.Contains(op, "IgnoreCase")
 		op = strings.Replace(op, "IgnoreCase", "", 1)
+		ifExists := strings.HasSuffix(op, "IfExists")
 		op = strings.TrimSuffix(op, "IfExists")
+		if _, present := c.Claims[cond.Key]; ifExists && !present {
+			// ...IfExists conditions pass when the token lacks the claim.
+			reasons = append(reasons, fmt.Sprintf("%s %s (claim absent)", cond.Op, cond.Key))
+			continue
+		}
 		vals := cond.Values
 		cand := c
 		if ignoreCase {

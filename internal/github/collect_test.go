@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -146,5 +147,19 @@ func TestLargeWorkflowAndEmptyRepo(t *testing.T) {
 		if strings.Contains(g, "o/empty commits") || strings.Contains(g, "409") {
 			t.Errorf("an empty repository's 409 must not produce a gap: %s", g)
 		}
+	}
+}
+
+func TestPaginationTruncationIsAnError(t *testing.T) {
+	var srv *httptest.Server
+	srv = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Link", "<"+srv.URL+r.URL.Path+"?page=next>; rel=\"next\"")
+		_, _ = w.Write([]byte(`[]`))
+	}))
+	defer srv.Close()
+	c := &Client{BaseURL: srv.URL, HTTP: srv.Client(), UserAgent: "test"}
+	err := paginate(context.Background(), c, "/x", func([]int) {})
+	if !errors.Is(err, ErrTruncated) {
+		t.Fatalf("endless pagination must end in ErrTruncated, got %v", err)
 	}
 }

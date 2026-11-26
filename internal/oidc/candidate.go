@@ -178,6 +178,23 @@ func Candidates(repo model.Repo) []Candidate {
 	return out
 }
 
+// TemplateProbe models a token from repo whose custom OIDC subject template
+// could not be read: the sub claim may take any form that mentions the
+// repository. It is only used to turn a "not reachable" into "needs review".
+func TemplateProbe(repo model.Repo) Candidate {
+	c := ExternalCandidate()
+	owner := repo.FullName
+	if i := strings.IndexByte(owner, '/'); i >= 0 {
+		owner = owner[:i]
+	}
+	c.Repo = repo.FullName
+	c.Label = "unknown OIDC subject template"
+	c.Claims["repository"] = repo.FullName
+	c.Claims["repository_owner"] = owner
+	c.Claims["sub"] = Slot + repo.FullName + Slot
+	return c
+}
+
 // ExternalCandidate models a token minted from a repository the estate does
 // not own, to detect trust that admits arbitrary GitHub users.
 func ExternalCandidate() Candidate {

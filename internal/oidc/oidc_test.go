@@ -193,3 +193,77 @@ func TestGCP(t *testing.T) {
 		}
 	}
 }
+
+// Regression tests for false negatives found in the fail-safe review.
+func TestFailSafeAWS(t *testing.T) {
+	cs := Candidates(repo())
+	cases := []struct {
+		name, cond string
+		want       bool
+	}{
+		{"condition key case is ignored", `{"StringLike":{"token.actions.githubusercontent.com:Sub":"repo:acme/api:*"}}`, true},
+		{"upper-case key, protected main only", `{"StringEquals":{"TOKEN.ACTIONS.GITHUBUSERCONTENT.COM:SUB":"repo:acme/api:ref:refs/heads/main"}}`, false},
+		{"IfExists passes when claim is absent", `{"StringEqualsIfExists":{"token.actions.githubusercontent.com:environment":"prod"},"StringLike":{"token.actions.githubusercontent.com:sub":"repo:acme/api:*"}}`, true},
+		{"IfExists still checks a present claim", `{"StringEqualsIfExists":{"token.actions.githubusercontent.com:repository":"acme/web"}}`, false},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			tr := trust(t, `{"Statement":[{"Effect":"Allow",`+ghPrincipal+`,"Condition":`+c.cond+`}]}`)
+			if got, _ := anyReachable(tr, cs); got != c.want {
+				t.Errorf("reachable=%v want %v", got, c.want)
+			}
+		})
+	}
+}
+
+func TestTemplateProbe(t *testing.T) {
+	r := repo()
+	r.OIDCSubTemplateUnknown = true
+	// Written for a custom template the collector could not read.
+	tr := trust(t, `{"Statement":[{"Effect":"Allow",`+ghPrincipal+`,"Condition":{"StringEquals":{"token.actions.githubusercontent.com:sub":"repository_owner_id:42:repo:acme/api:context:ref:refs/heads/feature"}}}]}`)
+	if ok, _ := anyReachable(tr, Candidates(r)); ok {
+		t.Fatal("default-template candidates should not match a custom-format subject")
+	}
+	if tr.Evaluate(TemplateProbe(r)).Verdict != Reachable {
+		t.Fatal("probe must flag trust that mentions the repository")
+	}
+	other := trust(t, `{"Statement":[{"Effect":"Allow",`+ghPrincipal+`,"Condition":{"StringEquals":{"token.actions.githubusercontent.com:sub":"repo:acme/web:ref:refs/heads/main"}}}]}`)
+	if other.Evaluate(TemplateProbe(r)).Verdict == Reachable {
+		t.Fatal("probe must not match other repositories")
+	}
+}
+
+func FuzzAWSTrust(f *testing.F) {
+	f.Add(`{"Statement":[{"Effect":"Allow",` + ghPrincipal + `,"Condition":{"StringLike":{"token.actions.githubusercontent.com:sub":"repo:a/*"}}}]}`)
+	f.Add(`{"Statement":{"Effect":"Allow","Principal":"*","Action":["sts:*"],"Condition":{"Null":{"x":"true"}}}}`)
+	cs := append(Candidates(repo()), ExternalCandidate())
+	f.Fuzz(func(t *testing.T, doc string) {
+		var m map[string]any
+		if json.Unmarshal([]byte(doc), &m) != nil {
+			return
+		}
+		tr, err := ParseAWSTrust(m)
+		if err != nil {
+			return
+		}
+		for _, c := range cs {
+			_ = tr.Evaluate(c)
+		}
+	})
+}
+
+func FuzzGCPCondition(f *testing.F) {
+	f.Add("assertion.repository == 'acme/api' && !(assertion.ref.startsWith('refs/heads/'))")
+	f.Add("attribute.repository in ['a/b', 'acme/api'] || assertion.environment != 'prod'")
+	cs := append(Candidates(repo()), ExternalCandidate())
+	f.Fuzz(func(t *testing.T, cond string) {
+		if len(cond) > 256 {
+			return
+		}
+		p := model.GCPProvider{IssuerURI: "https://token.actions.githubusercontent.com", AttributeCondition: cond,
+			AttributeMapping: map[string]string{"attribute.repository": "assertion.repository"}}
+		for _, c := range cs {
+			_ = EvaluateGCP(p, c)
+		}
+	})
+}

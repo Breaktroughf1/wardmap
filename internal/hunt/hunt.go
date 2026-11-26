@@ -187,6 +187,30 @@ func m(pattern, s string) bool {
 	return glob.Match(strings.ToLower(pattern), strings.ToLower(s))
 }
 
+// Coverage describes what hunting data a snapshot holds, so a report can say
+// what was not checked instead of implying a clean result.
+type Coverage struct {
+	GitHubHistory bool // pull requests, commits, runs (collect --hunt)
+	Cloud         bool // CloudTrail, Entra audit, cloud trust exports
+	Anything      bool
+}
+
+// CoverageOf inspects a snapshot.
+func CoverageOf(s *model.Snapshot) Coverage {
+	c := Coverage{GitHubHistory: s.HuntCollected}
+	for _, r := range s.Repos {
+		if len(r.PullRequests)+len(r.Commits)+len(r.Runs) > 0 {
+			c.GitHubHistory = true
+		}
+		if len(r.Branches)+len(r.Workflows) > 0 {
+			c.Anything = true
+		}
+	}
+	c.Cloud = len(s.CloudTrail)+len(s.CloudTrailEvents)+len(s.AzureAudit)+len(s.AzureFICs)+len(s.AWSRoles) > 0
+	c.Anything = c.Anything || c.GitHubHistory || c.Cloud
+	return c
+}
+
 // Run evaluates packs against the snapshot.
 func Run(s *model.Snapshot, packs []Pack) []Hit {
 	var hits []Hit

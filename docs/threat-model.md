@@ -45,6 +45,25 @@ Each candidate is a set of claims in which attacker-chosen parts are `*`. Trust 
 
 The repository's custom OIDC subject template (`include_claim_keys`) is honoured.
 
+## Fail-safe contract
+
+When Wardmap is unsure, it errs towards reporting exposure. It never errs towards reporting safety.
+
+| Situation | Behaviour |
+|---|---|
+| Trust condition, operator or CEL it cannot evaluate | *needs review*, **high** (WM014). Never "not reachable". |
+| Trust policy that cannot be parsed | WM014, **high** |
+| Repository's custom OIDC subject template not readable | Recorded as a gap. Any trust that mentions the repository is WM014 **high**. |
+| Branch protection unknown | Every branch is treated as pushable |
+| Environments unreadable | Every environment is treated as ungated |
+| Any GitHub data not readable (permissions, errors) | Collection gap (WM016), shown at the top of the report. `--fail-on-gaps` (Action: `fail-on-gaps`) turns it into a failing exit code. |
+| Pagination limit reached | An error (listing repositories) or a gap (everything else), never a silent truncation |
+| `hunt` without history or cloud exports | Says exactly which sources were not checked. With `--fail-on` and no data at all, it exits 2 instead of passing. |
+| Baseline, snapshot or IOC pack malformed, or snapshot from a newer schema | Exit 2 (error), never a pass |
+| IAM condition key case and `...IfExists` operators | Handled per IAM semantics (keys are case-insensitive; IfExists passes when the claim is absent) |
+
+The AWS policy evaluator, the GCP CEL evaluator, the glob engine and the workflow parser are fuzzed in CI.
+
 ## Known limitations
 
 - Branch protection uses the branches API `protected` flag. Rulesets that restrict branch *creation* are not modelled. If anything this produces extra findings, never fewer.

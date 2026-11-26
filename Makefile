@@ -12,6 +12,8 @@ test:
 fuzz:
 	go test -run '^$$' -fuzz=FuzzParse -fuzztime=60s ./internal/workflow/
 	go test -run '^$$' -fuzz=FuzzOverlapSelf -fuzztime=60s ./internal/glob/
+	go test -run '^$$' -fuzz=FuzzAWSTrust -fuzztime=60s ./internal/oidc/
+	go test -run '^$$' -fuzz=FuzzGCPCondition -fuzztime=60s ./internal/oidc/
 
 lint:
 	test -z "$$(gofmt -l .)"

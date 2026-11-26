@@ -17,7 +17,7 @@
 | <a id="wm011"></a>WM011 | medium | static-cloud-credential | A long-lived cloud key or server SSH private key stored as a secret, or a cloud login that does not use OIDC. |
 | <a id="wm012"></a>WM012 | critical | cloud-persistence-indicator | An AWS wildcard principal or a `wfx-ci-*` Entra federated credential. |
 | <a id="wm013"></a>WM013 | critical | gcp-provider-without-condition | A GCP provider for GitHub with no attribute condition. |
-| <a id="wm014"></a>WM014 | low | trust-needs-review | A condition Wardmap cannot evaluate. Never reported as safe. |
+| <a id="wm014"></a>WM014 | high | trust-needs-review | A trust Wardmap cannot decide: an unsupported condition, an unparsable policy, or a custom OIDC subject template it could not read. It fails closed (high) until a person reviews it and accepts it in a baseline. |
 | <a id="wm015"></a>WM015 | high | pull-request-target-checkout | A "pwn request": PR code runs with secrets or id-token. |
 | <a id="wm016"></a>WM016 | info | collection-gap | Data could not be collected; results for that scope are incomplete. |
 | <a id="wm017"></a>WM017 | low | secrets-inherit-to-third-party | `secrets: inherit` passes every secret to a third-party reusable workflow. |

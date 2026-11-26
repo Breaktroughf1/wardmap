@@ -120,3 +120,23 @@ func TestFingerprintStable(t *testing.T) {
 		}
 	}
 }
+
+func TestUnknownTemplateFailsClosed(t *testing.T) {
+	s := snap()
+	s.Repos[0].OIDCSubTemplateUnknown = true
+	s.AWSRoles = append(s.AWSRoles, model.AWSRole{ARN: "arn:aws:iam::1:role/custom", TrustPolicy: map[string]any{"Statement": []any{map[string]any{
+		"Effect": "Allow", "Action": "sts:AssumeRoleWithWebIdentity",
+		"Principal": map[string]any{"Federated": "arn:aws:iam::1:oidc-provider/token.actions.githubusercontent.com"},
+		"Condition": map[string]any{"StringEquals": map[string]any{
+			"token.actions.githubusercontent.com:sub": "repository_owner_id:9:repo:acme/api:context:ref:refs/heads/x"}}}}}})
+	var hit *Finding
+	res := Analyze(s, Options{})
+	for i, f := range res.Findings {
+		if f.RuleID == "WM014" && f.Key == "acme/api|aws-role:arn:aws:iam::1:role/custom" {
+			hit = &res.Findings[i]
+		}
+	}
+	if hit == nil || hit.Severity != High {
+		t.Fatalf("trust for an unreadable custom template must be a HIGH needs-review finding, got %+v", hit)
+	}
+}

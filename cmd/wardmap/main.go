@@ -48,7 +48,7 @@ Usage:
   wardmap collect   --org ORG | --repo OWNER/NAME... [--hunt] [-o snapshot.json]
   wardmap import    -s snapshot.json [--aws FILE] [--azure [APPID=]FILE] [--gcp FILE] [--cloudtrail FILE] [--azure-audit FILE]
   wardmap local     [--dir .] [--repo OWNER/NAME] [-o snapshot.json]   (offline: workflows from disk)
-  wardmap scan      -s snapshot.json [--format md|json|sarif|mermaid|dot] [--fail-on SEV] [--baseline FILE]
+  wardmap scan      -s snapshot.json [--format md|json|sarif|mermaid|dot] [--fail-on SEV] [--baseline FILE] [--fail-on-gaps]
   wardmap baseline  -s snapshot.json [-o wardmap-baseline.json]
   wardmap reach     -s snapshot.json QUERY
   wardmap hunt      -s snapshot.json [--iocs DIR] [--format md|json] [--fail-on low|medium|high]
@@ -100,6 +100,7 @@ type common struct {
 	noProgress bool
 	offline    bool
 	maxFiles   int
+	failGaps   bool
 }
 
 func newFlags(name string) *common {
@@ -125,6 +126,7 @@ func newFlags(name string) *common {
 	c.fs.StringVar(&c.dir, "dir", ".", "repository checkout for `local`")
 	c.fs.BoolVar(&c.noProgress, "quiet", false, "suppress progress output")
 	c.fs.IntVar(&c.maxFiles, "max-commit-files", 60, "hunt: commits per repository whose changed-file lists are fetched")
+	c.fs.BoolVar(&c.failGaps, "fail-on-gaps", false, "scan: exit 1 when any data could not be collected (use with live scans in CI)")
 	c.fs.BoolVar(&c.offline, "offline", false, "run: scan workflows from --dir instead of calling the GitHub API")
 	return c
 }
@@ -222,15 +224,20 @@ func run(ctx context.Context, args []string, stdout, stderr io.Writer) (int, err
 			return 2, err
 		}
 		hits := hunt.Run(s, packs)
+		cov := hunt.CoverageOf(s)
 		err = writeOut(c.out, stdout, func(w io.Writer) error {
 			if c.format == "json" {
-				return report.JSON(w, map[string]any{"packs": packs, "hits": hits})
+				return report.JSON(w, map[string]any{"packs": packs, "hits": hits, "coverage": cov})
 			}
-			report.HuntMarkdown(w, hits, packs)
+			report.HuntMarkdown(w, hits, packs, cov)
 			return nil
 		})
 		if err != nil {
 			return 2, err
+		}
+		if !cov.Anything && c.failOn != "none" {
+			// Fail safe: a gate must not pass when nothing could be checked.
+			return 2, errors.New("hunt had no data to check; refusing to report a clean result")
 		}
 		if c.failOn != "none" {
 			for _, h := range hits {
@@ -401,6 +408,9 @@ func scan(s *model.Snapshot, c *common, stdout io.Writer) (int, error) {
 		return 2, err
 	}
 	if newReach > 0 {
+		return 1, nil
+	}
+	if c.failGaps && len(res.Gaps) > 0 {
 		return 1, nil
 	}
 	if c.failOn != "none" {

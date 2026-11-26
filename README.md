@@ -135,6 +135,7 @@ Found a false negative (Wardmap said "not reachable" but it is)? Report it priva
 
 ## Limits (read before trusting a clean report)
 
+- Wardmap fails safe: anything it cannot decide is reported as *needs review* at high severity, and missing data is a visible gap (use `--fail-on-gaps` to make it fail CI). See the [fail-safe contract](docs/threat-model.md#fail-safe-contract).
 - A clean `hunt` does not prove no compromise. wfx-loot deleted runs, logs and commits.
 - Branch protection comes from the branches API. Where it is missing, Wardmap assumes nothing is protected. That can produce extra findings, but never fewer.
 - GCP reach stops at the provider; service-account IAM bindings are not yet evaluated.

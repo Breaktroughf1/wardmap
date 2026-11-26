@@ -3,6 +3,7 @@ package github
 import (
 	"context"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"net/url"
 	"sort"
@@ -43,7 +44,7 @@ func Collect(ctx context.Context, c *Client, o Options) (*model.Snapshot, error)
 	if o.Progress == nil {
 		o.Progress = func(string) {}
 	}
-	s := &model.Snapshot{SchemaVersion: model.SchemaVersion, CollectedAt: time.Now().UTC(), Owner: o.Owner}
+	s := &model.Snapshot{SchemaVersion: model.SchemaVersion, CollectedAt: time.Now().UTC(), Owner: o.Owner, HuntCollected: o.Hunt}
 	col := &collector{c: c, o: o, s: s}
 
 	repos, err := col.listRepos(ctx)
@@ -294,9 +295,9 @@ func (col *collector) oidcTemplate(ctx context.Context, r *model.Repo) {
 		IncludeClaimKeys []string `json:"include_claim_keys"`
 	}
 	if _, err := col.c.Get(ctx, "/repos/"+r.FullName+"/actions/oidc/customization/sub", &t); err != nil {
-		if !IsAccessDenied(err) {
-			col.gap("%s OIDC subject template: %v", r.FullName, short(err))
-		}
+		// Fail safe: an unreadable template must not be assumed default.
+		r.OIDCSubTemplateUnknown = true
+		col.gap("%s OIDC subject template not readable (%v); cloud trust that mentions this repository is reported as needing review", r.FullName, short(err))
 		return
 	}
 	if !t.UseDefault {
@@ -447,7 +448,11 @@ func (col *collector) hunt(ctx context.Context, r *model.Repo) {
 		r.Commits = append(r.Commits, mc)
 	}
 	path = base + "/actions/runs?per_page=100&created=" + url.QueryEscape(">="+since.Format("2006-01-02"))
-	for pages := 0; path != "" && pages < 10; pages++ {
+	for pages := 0; path != ""; pages++ {
+		if pages == 10 {
+			col.gap("%s: hunt sampled the newest 1,000 workflow runs since %s; older run-number gaps were not checked (narrow with --since)", r.FullName, since.Format("2006-01-02"))
+			break
+		}
 		var page struct {
 			WorkflowRuns []struct {
 				WorkflowID int64     `json:"workflow_id"`
@@ -471,8 +476,18 @@ func (col *collector) hunt(ctx context.Context, r *model.Repo) {
 }
 
 // paginate fetches every page of path, decoding each into T.
+// ErrTruncated reports that pagination stopped at the safety cap with more
+// pages remaining. Callers record it, so results are never silently partial.
+var ErrTruncated = errors.New("result truncated at the pagination limit")
+
+// maxPages bounds pagination (100 items per page).
+const maxPages = 200
+
 func paginate[T any](ctx context.Context, c *Client, path string, f func(T)) error {
-	for pages := 0; path != "" && pages < 200; pages++ {
+	for pages := 0; path != ""; pages++ {
+		if pages == maxPages {
+			return fmt.Errorf("%w (%d pages)", ErrTruncated, maxPages)
+		}
 		var page T
 		next, err := c.Get(ctx, path, &page)
 		if err != nil {

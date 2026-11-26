@@ -134,3 +134,35 @@ func TestLocal(t *testing.T) {
 		t.Errorf("exit %d:\n%s", code, out)
 	}
 }
+
+func TestFailSafeExitCodes(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(dir, ".github/workflows"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	_ = os.WriteFile(filepath.Join(dir, ".github/workflows/ok.yml"), []byte("on: push\njobs:\n  a:\n    runs-on: x\n    steps: [{run: echo}]\n"), 0o644)
+	// An offline snapshot always has a gap (no secret inventory).
+	if code, _ := wm(t, "run", "--offline", "--dir", dir, "--repo", "o/r", "--fail-on", "high"); code != 0 {
+		t.Errorf("clean offline scan should pass without --fail-on-gaps, got %d", code)
+	}
+	if code, _ := wm(t, "run", "--offline", "--dir", dir, "--repo", "o/r", "--fail-on-gaps"); code != 1 {
+		t.Errorf("--fail-on-gaps must fail when data is incomplete, got %d", code)
+	}
+	// A hunt with nothing to check must not pass a gate.
+	empty := filepath.Join(dir, "empty.json")
+	_ = os.WriteFile(empty, []byte(`{"schema_version":1}`), 0o600)
+	if code, out := wm(t, "hunt", "-s", empty, "--fail-on", "high"); code != 2 {
+		t.Errorf("hunt with no data and --fail-on must exit 2, got %d:\n%s", code, out)
+	}
+	if code, out := wm(t, "hunt", "-s", empty); code != 0 || !strings.Contains(out, "Nothing to hunt in") {
+		t.Errorf("hunt with no data must say so: %d\n%s", code, out)
+	}
+	// Workflows but no history or cloud data: say what was not checked.
+	snap := filepath.Join(dir, "s.json")
+	if code, _ := wm(t, "local", "--dir", dir, "--repo", "o/r", "-o", snap); code != 0 {
+		t.Fatal("local failed")
+	}
+	if _, out := wm(t, "hunt", "-s", snap); !strings.Contains(out, "pull requests, commits and workflow runs were not collected") || !strings.Contains(out, "no CloudTrail") {
+		t.Errorf("hunt must list unchecked sources:\n%s", out)
+	}
+}
