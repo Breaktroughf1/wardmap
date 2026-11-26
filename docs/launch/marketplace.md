@@ -2,9 +2,9 @@
 
 The Action is already Marketplace-ready: `action.yml` is at the repository root with `name`, `description` and `branding`. Publishing is a checkbox on the release page, and only a repository owner can tick it.
 
-## Steps (after the v1.0.0 release exists)
+## Steps (after the v1.0.1 release exists)
 
-1. Open https://github.com/Breaktroughf1/wardmap/releases, then the v1.0.0 release, then **Edit**.
+1. Open https://github.com/Breaktroughf1/wardmap/releases, then the v1.0.1 release, then **Edit**.
 2. Tick **Publish this Action to the GitHub Marketplace**. Accept the Marketplace Developer Agreement if GitHub asks; it requires two-factor authentication on the account.
 3. **Primary category:** Security. **Secondary category:** Continuous integration.
 4. GitHub checks that the name "Wardmap" is unique on the Marketplace. If it is taken, change `name:` in `action.yml` to "Wardmap CI blast radius" and release again.
@@ -26,10 +26,10 @@ permissions:
 steps:
   - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
     with: { persist-credentials: false }
-  - uses: Breaktroughf1/wardmap@08c1f76c11324a01e12d11e5c866752f9c4abb45 # v1.0.0
+  - uses: Breaktroughf1/wardmap@4c7edfaf264d192ed9629bb81be5b6cdc9015c9c # v1.0.1
     with:
       mode: offline
       fail-on: high
 ```
 
-`08c1f76c11324a01e12d11e5c866752f9c4abb45` is the commit the v1.0.0 tag points to; README.md uses the same pin.
+`4c7edfaf264d192ed9629bb81be5b6cdc9015c9c` is the commit the v1.0.1 tag points to; README.md uses the same pin.

@@ -37,17 +37,19 @@ gh attestation verify wardmap_v0.9.0_darwin_arm64 --repo Breaktroughf1/wardmap &
 - [x] Do a trademark search for "Wardmap". Preliminary desk search done (docs/launch/name-check.md); a lawyer still needs to clear it, because WORDMAP is a close live US mark.
 - [ ] Optionally, check the IOC packs against the primary posts and set `verified: primary` where they match.
 
-## 3. Cut v1.0.0
+## 3. v1.0.0 ✅ released 26 Nov 2026 (verified: checksums, attestation, version)
 
-The release commit is ready on `main`: "Fix gaps found by the first real-organisation scan" (`08c1f76`). The CHANGELOG is dated, the pre-release notice is gone, and the README Action pin points at this commit. Tag exactly that commit:
+## 3a. Cut v1.0.1 (fail-safe hardening; use this for launch)
+
+The release commit is "Release v1.0.1: fail-safe hardening" (`4c7edfa`). The README and Marketplace snippets already pin it.
 
 ```bash
-git pull && git tag -a v1.0.0 08c1f76c11324a01e12d11e5c866752f9c4abb45 -m "Wardmap v1.0.0" && git push origin v1.0.0
+git pull && git tag -a v1.0.1 4c7edfaf264d192ed9629bb81be5b6cdc9015c9c -m "Wardmap v1.0.1" && git push origin v1.0.1
 ```
 
-After the release is published:
-- [ ] Publish the Action to the Marketplace (docs/launch/marketplace.md).
-- [x] README Action snippet pinned to the v1.0.0 commit.
+After the release is published (about 2 minutes):
+- [ ] Publish the Action to the Marketplace from the **v1.0.1** release (docs/launch/marketplace.md).
+- [x] README Action snippet pinned to the v1.0.1 commit.
 
 ## 4. Launch day
 
