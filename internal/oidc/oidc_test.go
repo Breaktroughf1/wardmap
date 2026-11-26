@@ -3,6 +3,7 @@ package oidc
 import (
 	"encoding/json"
 	"testing"
+	"time"
 
 	"github.com/Breaktroughf1/wardmap/internal/model"
 )
@@ -278,4 +279,73 @@ func FuzzGCPCondition(f *testing.F) {
 			_ = EvaluateGCP(p, c)
 		}
 	})
+}
+
+// GitHub immutable subject claims (default for repositories created after
+// 15 July 2026): repo:OWNER@OWNER_ID/REPO@REPO_ID:context.
+func TestImmutableSubjects(t *testing.T) {
+	immTrust := func(sub string) AWSTrust {
+		return trust(t, `{"Statement":[{"Effect":"Allow",`+ghPrincipal+`,"Condition":{"StringLike":{"token.actions.githubusercontent.com:sub":"`+sub+`"}}}]}`)
+	}
+	newRepo := repo()
+	newRepo.OwnerID, newRepo.RepoID = 111, 222
+	newRepo.CreatedAt = time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC)
+
+	// The false negative this fixes: an immutable-format trust on a feature branch.
+	if ok, _ := anyReachable(immTrust("repo:acme@111/api@222:ref:refs/heads/*"), Candidates(newRepo)); !ok {
+		t.Fatal("immutable-format trust must be reachable for a new repository")
+	}
+	// A new repository never carries the name-only format.
+	if ok, _ := anyReachable(immTrust("repo:acme/api:*"), Candidates(newRepo)); ok {
+		t.Error("name-only trust cannot match a repository created after the cutoff")
+	}
+	// Protected main stays unreachable in the immutable format too.
+	if ok, _ := anyReachable(immTrust("repo:acme@111/api@222:ref:refs/heads/main"), Candidates(newRepo)); ok {
+		t.Error("protected branch exclusion must hold for immutable subjects")
+	}
+	// Another repository's IDs do not match.
+	if ok, _ := anyReachable(immTrust("repo:acme@111/api@999:*"), Candidates(newRepo)); ok {
+		t.Error("a different repository ID must not match")
+	}
+	// Old repository, opt-in unknown: both formats are evaluated (fail safe).
+	old := repo()
+	if ok, _ := anyReachable(immTrust("repo:acme@*/api@*:ref:refs/heads/dev"), Candidates(old)); !ok {
+		t.Error("format unknown: immutable-format trust must be evaluated")
+	}
+	if ok, _ := anyReachable(immTrust("repo:acme/api:ref:refs/heads/dev"), Candidates(old)); !ok {
+		t.Error("format unknown: legacy trust must be evaluated")
+	}
+	// Reported opt-in means immutable only; a reported prefix is authoritative.
+	yes := true
+	opted := repo()
+	opted.ImmutableSubject = &yes
+	if ok, _ := anyReachable(immTrust("repo:acme/api:*"), Candidates(opted)); ok {
+		t.Error("opted-in repository must not match legacy trust")
+	}
+	pref := repo()
+	pref.SubClaimPrefix = "repo:acme@5/api@6"
+	if ok, _ := anyReachable(immTrust("repo:acme@5/api@6:pull_request"), Candidates(pref)); !ok {
+		t.Error("reported sub_claim_prefix must be used")
+	}
+	// Custom templates keep the IDs in the repo segment.
+	tpl := newRepo
+	tpl.OIDCSubTemplate = []string{"repo", "context", "job_workflow_ref"}
+	if ok, _ := anyReachable(immTrust("repo:acme@111/api@222:ref:refs/heads/*:job_workflow_ref:*"), Candidates(tpl)); !ok {
+		t.Error("custom template with immutable repo segment must be reachable")
+	}
+	// The unknown-template probe still finds trust in the immutable format.
+	if immTrust("org:x:repo:acme@111/api@222:ctx").Evaluate(TemplateProbe(newRepo)).Verdict != Reachable {
+		t.Error("probe must match immutable-format subjects")
+	}
+	// Trust for any immutable-format repository is internet-wide.
+	tr := immTrust("repo:*@*/*@*:*")
+	hit := false
+	for _, e := range ExternalCandidates() {
+		if tr.Evaluate(e).Verdict == Reachable {
+			hit = true
+		}
+	}
+	if !hit {
+		t.Error("external immutable candidate must detect internet-wide trust")
+	}
 }

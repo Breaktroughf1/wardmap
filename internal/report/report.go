@@ -39,6 +39,7 @@ var Rules = []Rule{
 	{"WM017", "secrets-inherit-to-third-party", "All secrets passed to a third-party reusable workflow", "Pass only the secrets the called workflow needs."},
 	{"WM018", "workflow-parse-error", "Workflow could not be parsed", "Fix the YAML; Wardmap skips unparsable workflows."},
 	{"WM019", "github-token-in-secrets", "GitHub personal access token stored as an Actions secret", "Use GITHUB_TOKEN with scoped permissions or a GitHub App installation token; if a PAT is unavoidable, make it fine-grained, limited to the target repositories, and keep it in a gated environment."},
+	{"WM021", "trust-pins-repository-names", "OIDC trust identifies repositories by name only", "Use immutable subjects (repo:OWNER@ID/REPO@ID) or ID conditions so a re-registered name cannot inherit the trust."},
 }
 
 // Markdown writes a human-readable report.

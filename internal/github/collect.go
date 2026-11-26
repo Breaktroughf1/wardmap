@@ -89,6 +89,11 @@ func (col *collector) gap(format string, a ...any) {
 }
 
 type apiRepo struct {
+	ID        int64     `json:"id"`
+	CreatedAt time.Time `json:"created_at"`
+	Owner     struct {
+		ID int64 `json:"id"`
+	} `json:"owner"`
 	FullName      string `json:"full_name"`
 	DefaultBranch string `json:"default_branch"`
 	Private       bool   `json:"private"`
@@ -125,7 +130,8 @@ func (col *collector) listRepos(ctx context.Context) ([]model.Repo, error) {
 			continue
 		}
 		out = append(out, model.Repo{FullName: r.FullName, DefaultBranch: r.DefaultBranch,
-			Private: r.Private || r.Visibility == "internal", Archived: r.Archived})
+			Private: r.Private || r.Visibility == "internal", Archived: r.Archived,
+			RepoID: r.ID, OwnerID: r.Owner.ID, CreatedAt: r.CreatedAt})
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].FullName < out[j].FullName })
 	return out, nil
@@ -291,8 +297,10 @@ func (col *collector) environments(ctx context.Context, r *model.Repo) {
 
 func (col *collector) oidcTemplate(ctx context.Context, r *model.Repo) {
 	var t struct {
-		UseDefault       bool     `json:"use_default"`
-		IncludeClaimKeys []string `json:"include_claim_keys"`
+		UseDefault          bool     `json:"use_default"`
+		IncludeClaimKeys    []string `json:"include_claim_keys"`
+		UseImmutableSubject *bool    `json:"use_immutable_subject"`
+		SubClaimPrefix      string   `json:"sub_claim_prefix"`
 	}
 	if _, err := col.c.Get(ctx, "/repos/"+r.FullName+"/actions/oidc/customization/sub", &t); err != nil {
 		// Fail safe: an unreadable template must not be assumed default.
@@ -303,6 +311,8 @@ func (col *collector) oidcTemplate(ctx context.Context, r *model.Repo) {
 	if !t.UseDefault {
 		r.OIDCSubTemplate = t.IncludeClaimKeys
 	}
+	r.ImmutableSubject = t.UseImmutableSubject
+	r.SubClaimPrefix = t.SubClaimPrefix
 }
 
 func (col *collector) branches(ctx context.Context, r *model.Repo) {

@@ -25,7 +25,7 @@ jobs:
 func TestCollect(t *testing.T) {
 	var methods []string
 	routes := map[string]any{
-		"/orgs/acme/repos":                                  []map[string]any{{"full_name": "acme/api", "default_branch": "main", "private": true}},
+		"/orgs/acme/repos":                                  []map[string]any{{"full_name": "acme/api", "default_branch": "main", "private": true, "id": 222, "owner": map[string]any{"id": 111}, "created_at": "2026-09-01T00:00:00Z"}},
 		"/orgs/acme/actions/secrets":                        map[string]any{"secrets": []map[string]any{{"name": "NPM_TOKEN", "visibility": "selected", "updated_at": "2026-01-01T00:00:00Z"}}},
 		"/orgs/acme/actions/secrets/NPM_TOKEN/repositories": map[string]any{"repositories": []map[string]any{{"full_name": "acme/api"}}},
 		"/repos/acme/api/actions/secrets":                   map[string]any{"secrets": []map[string]any{{"name": "DEPLOY_KEY", "updated_at": "2026-02-01T00:00:00Z"}}},
@@ -35,7 +35,7 @@ func TestCollect(t *testing.T) {
 		}},
 		"/repos/acme/api/environments/prod/deployment-branch-policies": map[string]any{"branch_policies": []map[string]any{{"name": "main", "type": "branch"}}},
 		"/repos/acme/api/environments/prod/secrets":                    map[string]any{"secrets": []map[string]any{{"name": "DB_URL"}}},
-		"/repos/acme/api/actions/oidc/customization/sub":               map[string]any{"use_default": false, "include_claim_keys": []string{"repo", "context"}},
+		"/repos/acme/api/actions/oidc/customization/sub":               map[string]any{"use_default": false, "include_claim_keys": []string{"repo", "context"}, "use_immutable_subject": true, "sub_claim_prefix": "repo:acme@111/api@222"},
 		"/repos/acme/api/branches":                                     []map[string]any{{"name": "main", "protected": true}, {"name": "dev", "protected": false}},
 		"/repos/acme/api/contents/.github/workflows":                   []map[string]any{{"path": ".github/workflows/deploy.yml", "type": "file"}},
 		"/repos/acme/api/contents/.github/workflows/deploy.yml":        map[string]any{"content": base64.StdEncoding.EncodeToString([]byte(wf)), "encoding": "base64"},
@@ -81,6 +81,9 @@ func TestCollect(t *testing.T) {
 	}
 	if strings.Join(r.OIDCSubTemplate, ",") != "repo,context" || strings.Join(r.ProtectedBranches, ",") != "main" {
 		t.Fatalf("template/protection wrong: %+v", r)
+	}
+	if r.RepoID != 222 || r.OwnerID != 111 || r.CreatedAt.IsZero() || r.ImmutableSubject == nil || !*r.ImmutableSubject || r.SubClaimPrefix != "repo:acme@111/api@222" {
+		t.Fatalf("immutable subject data not collected: %+v", r)
 	}
 	if len(r.Workflows) != 1 || !r.Workflows[0].Jobs[0].IDTokenWrite {
 		t.Fatalf("workflow wrong: %+v", r.Workflows)

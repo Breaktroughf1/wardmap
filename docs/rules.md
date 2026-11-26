@@ -22,6 +22,7 @@
 | <a id="wm016"></a>WM016 | info | collection-gap | Data could not be collected; results for that scope are incomplete. |
 | <a id="wm017"></a>WM017 | low | secrets-inherit-to-third-party | `secrets: inherit` passes every secret to a third-party reusable workflow. |
 | <a id="wm018"></a>WM018 | info | workflow-parse-error | The workflow YAML could not be parsed (the message says whether it was empty or the wrong shape). |
+| <a id="wm021"></a>WM021 | low | trust-pins-repository-names | AWS trust names repositories without immutable IDs; a re-registered organisation or repository name would inherit it. |
 | <a id="wm019"></a>WM019 | medium | github-token-in-secrets | A GitHub personal access token is stored as a secret. Anyone who can read it can act as its owner on every repository it reaches, which is a lateral-movement path. Prefer `GITHUB_TOKEN` or a GitHub App token. |
 
 Each finding has a stable fingerprint (`partialFingerprints["wardmap/v1"]`). Baselines use it, and code scanning uses it to track alerts across runs.

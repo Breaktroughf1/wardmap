@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Breaktroughf1/wardmap/internal/glob"
 	"github.com/Breaktroughf1/wardmap/internal/model"
 	"github.com/Breaktroughf1/wardmap/internal/oidc"
 )
@@ -285,9 +286,16 @@ func (a *analyzer) targets() []target {
 
 func (a *analyzer) cloudReach() {
 	ts := a.targets()
-	ext := oidc.ExternalCandidate()
 	for _, t := range ts {
-		if r := t.eval(ext); r.Verdict == oidc.Reachable {
+		var ext oidc.Candidate
+		r := oidc.Result{}
+		for _, e := range oidc.ExternalCandidates() {
+			if rr := t.eval(e); rr.Verdict == oidc.Reachable {
+				ext, r = e, rr
+				break
+			}
+		}
+		if r.Verdict == oidc.Reachable {
 			a.res.Edges = append(a.res.Edges, Edge{From: ExternalActor, To: t.kind + ":" + t.id, Kind: t.kind, Via: ext.Label, Verdict: "reachable", Reason: r.Reason})
 			a.add("WM006", Critical, "", "", t.kind+":"+t.id,
 				fmt.Sprintf("%s %s trusts GitHub OIDC tokens from ANY GitHub repository (%s). Anyone on GitHub can obtain credentials. Constrain the subject to your repositories and protected refs or environments.", t.kind, t.id, r.Reason))
@@ -359,6 +367,16 @@ func (a *analyzer) cloudLint() {
 		if unconstrained {
 			a.add("WM004", High, "", "", "aws-nosub:"+pr.role.ARN,
 				"Role "+pr.role.ARN+" has a GitHub OIDC statement with no sub condition.")
+		}
+		var nameOnly []string
+		for _, s := range subs {
+			if parts := strings.SplitN(s, ":", 3); len(parts) >= 2 && parts[0] == "repo" && !strings.Contains(parts[1], "@") && !glob.HasWildcard(parts[1]) {
+				nameOnly = append(nameOnly, s)
+			}
+		}
+		if len(nameOnly) > 0 {
+			a.add("WM021", Low, "", "", "aws-names:"+pr.role.ARN,
+				fmt.Sprintf("Role %s identifies repositories by name only (%s). If the organisation or repository name is ever deleted and re-registered, the new owner can assume the role. Use GitHub's immutable subjects (repo:OWNER@ID/REPO@ID:...), the default for repositories created after 15 July 2026, or add repository_id/repository_owner_id conditions.", pr.role.ARN, strings.Join(nameOnly, ", ")))
 		}
 		for _, s := range subs {
 			if s == "*" || orgWideSub.MatchString(s) {

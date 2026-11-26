@@ -101,7 +101,7 @@ No token at all? `wardmap local --dir .` scans the workflows in a checkout.
 | `collect` | Read-only GitHub collection into a snapshot (`--hunt` adds PRs, commits, runs) |
 | `local` | Offline snapshot from workflows on disk |
 | `import` | Add AWS, Azure, GCP, CloudTrail and Entra audit-log exports to a snapshot |
-| `scan` | Reach graph and 19 rules; `md`, `json`, `sarif`, `mermaid`, `dot` |
+| `scan` | Reach graph and 21 rules; `md`, `json`, `sarif`, `mermaid`, `dot` |
 | `reach QUERY` | Who can reach a secret, role, environment or repository |
 | `baseline` / `scan --baseline` | Approve today's reach; fail CI on *new* reach or findings |
 | `hunt` | Match versioned IOC packs; run-number gaps; OIDC sessions from deleted branches; trust rewrites and backdoor credentials in CloudTrail and Entra audit logs |

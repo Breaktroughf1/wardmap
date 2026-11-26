@@ -74,6 +74,17 @@ type Repo struct {
 	// OIDCSubTemplate holds include_claim_keys when the repo customises its
 	// OIDC subject; empty means the GitHub default.
 	OIDCSubTemplate []string `json:"oidc_sub_template,omitempty"`
+	// OwnerID and RepoID are GitHub's immutable numeric IDs (0 when unknown).
+	OwnerID int64 `json:"owner_id,omitempty"`
+	RepoID  int64 `json:"repo_id,omitempty"`
+	// CreatedAt decides the default sub format: repositories created after
+	// 15 July 2026 use immutable subjects (repo:OWNER@ID/REPO@ID:...).
+	CreatedAt time.Time `json:"created_at,omitempty"`
+	// ImmutableSubject is the repository's use_immutable_subject setting
+	// (nil when not reported; it then falls back to the organisation).
+	ImmutableSubject *bool `json:"use_immutable_subject,omitempty"`
+	// SubClaimPrefix is GitHub's reported current sub prefix, when available.
+	SubClaimPrefix string `json:"sub_claim_prefix,omitempty"`
 	// OIDCSubTemplateUnknown is set when the template could not be read.
 	// Trust that might match under some template is then reported as
 	// needing review instead of not reachable.

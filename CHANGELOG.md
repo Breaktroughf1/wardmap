@@ -2,6 +2,16 @@
 
 ## v1.1.0 — 2026-11-27
 
+### Fixed: GitHub immutable OIDC subject claims (false negative)
+
+GitHub's default `sub` claim includes immutable IDs (`repo:OWNER@ID/REPO@ID:…`) for repositories created after 15 July 2026, for repositories renamed or transferred after that date, and for opted-in repositories. Earlier versions modelled only the name-based format, so they could report a role trusting the new format as **not reachable**. Wardmap now does the following:
+- Collects repository and owner IDs, the creation date, `use_immutable_subject` and `sub_claim_prefix`.
+- Evaluates the exact format when GitHub reports it, and both formats when it cannot be determined.
+- Applies the immutable format to custom templates, the unknown-template probe and the internet-wide check.
+- Adds WM021, which flags trust that identifies repositories by name only (name-squatting risk).
+
+**Upgrading is strongly recommended.**
+
 Wardmap is now installable from every common channel, each delivering the same signed binary.
 
 - **Release archives** are built reproducibly with GoReleaser: tar.gz for Linux and macOS, zip for Windows, amd64 and arm64, plus a source archive. `checksums.txt` carries a keyless Sigstore signature (`checksums.txt.sigstore.json`), and the archives keep SLSA build provenance. Archive names change from `wardmap_vX.Y.Z_<os>_<arch>` (raw binaries) to `wardmap_X.Y.Z_<os>_<arch>.tar.gz` / `.zip`.

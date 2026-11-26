@@ -13,7 +13,9 @@
 package oidc
 
 import (
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/Breaktroughf1/wardmap/internal/glob"
 	"github.com/Breaktroughf1/wardmap/internal/model"
@@ -74,9 +76,50 @@ func (c Candidate) AdmitsNot(claim, pattern string) bool {
 	return !(pattern == "*" || pattern == v)
 }
 
+// ImmutableCutoff is when GitHub made immutable subject claims the default
+// for new repositories (and for repositories renamed or transferred later).
+var ImmutableCutoff = time.Date(2026, 7, 15, 0, 0, 0, 0, time.UTC)
+
+// SubPrefixes returns the repo segment(s) the repository's sub claims may
+// start with. Fail safe: when the format cannot be determined, both the
+// name-based and the immutable (ID-based) forms are evaluated.
+func SubPrefixes(r model.Repo) []string {
+	owner, name := r.FullName, ""
+	if i := strings.IndexByte(r.FullName, '/'); i >= 0 {
+		owner, name = r.FullName[:i], r.FullName[i+1:]
+	}
+	legacy := "repo:" + r.FullName
+	immutable := "repo:" + owner + "@" + idOrSlot(r.OwnerID) + "/" + name + "@" + idOrSlot(r.RepoID)
+	if p := strings.TrimSpace(r.SubClaimPrefix); p != "" {
+		if strings.HasPrefix(p, "repo:") {
+			return []string{p}
+		}
+		return []string{"repo:" + p, legacy, immutable}
+	}
+	if (r.ImmutableSubject != nil && *r.ImmutableSubject) || (!r.CreatedAt.IsZero() && !r.CreatedAt.Before(ImmutableCutoff)) {
+		return []string{immutable}
+	}
+	return []string{legacy, immutable}
+}
+
 // Candidates enumerates the token families an attacker with write access to
-// repo can mint.
+// repo can mint, in every sub format the repository may use.
 func Candidates(repo model.Repo) []Candidate {
+	prefixes := SubPrefixes(repo)
+	var out []Candidate
+	for _, p := range prefixes {
+		cs := candidatesFor(repo, p)
+		if len(prefixes) > 1 && strings.Contains(p, "@") {
+			for i := range cs {
+				cs[i].Label += " [immutable sub format]"
+			}
+		}
+		out = append(out, cs...)
+	}
+	return out
+}
+
+func candidatesFor(repo model.Repo, prefix string) []Candidate {
 	protectedBranches := repo.ProtectedBranches
 	owner := repo.FullName
 	if i := strings.IndexByte(owner, '/'); i >= 0 {
@@ -91,8 +134,8 @@ func Candidates(repo model.Repo) []Candidate {
 			"repository":            repo.FullName,
 			"repository_owner":      owner,
 			"repository_visibility": vis,
-			"repository_id":         Slot, // fixed but unknown to us
-			"repository_owner_id":   Slot,
+			"repository_id":         idOrSlot(repo.RepoID),
+			"repository_owner_id":   idOrSlot(repo.OwnerID),
 			"actor":                 Slot,
 			"actor_id":              Slot,
 			"workflow":              Slot,
@@ -111,7 +154,7 @@ func Candidates(repo model.Repo) []Candidate {
 			cl[k] = v
 		}
 		cl["context"] = context
-		cl["sub"] = RenderSub(tpl, repo.FullName, cl)
+		cl["sub"] = RenderSub(tpl, prefix, cl)
 		c := Candidate{Repo: repo.FullName, Label: label, Claims: cl, Excluded: map[string][]string{}}
 		for _, x := range exclVals {
 			ctx, ex := excl(x)
@@ -125,7 +168,7 @@ func Candidates(repo model.Repo) []Candidate {
 					c.Excluded[k] = append(c.Excluded[k], v)
 				}
 			}
-			c.Excluded["sub"] = append(c.Excluded["sub"], RenderSub(tpl, repo.FullName, ecl))
+			c.Excluded["sub"] = append(c.Excluded["sub"], RenderSub(tpl, prefix, ecl))
 		}
 		out = append(out, c)
 	}
@@ -191,8 +234,27 @@ func TemplateProbe(repo model.Repo) Candidate {
 	c.Label = "unknown OIDC subject template"
 	c.Claims["repository"] = repo.FullName
 	c.Claims["repository_owner"] = owner
-	c.Claims["sub"] = Slot + repo.FullName + Slot
+	// Owner and name, with anything (such as immutable IDs) around them.
+	name := strings.TrimPrefix(repo.FullName, owner+"/")
+	c.Claims["sub"] = Slot + owner + Slot + "/" + name + Slot
 	return c
+}
+
+func idOrSlot(id int64) string {
+	if id > 0 {
+		return strconv.FormatInt(id, 10)
+	}
+	return Slot
+}
+
+// ExternalCandidates models tokens from repositories outside the estate, in
+// both sub formats.
+func ExternalCandidates() []Candidate {
+	legacy := ExternalCandidate()
+	immutable := ExternalCandidate()
+	immutable.Label += " [immutable sub format]"
+	immutable.Claims["sub"] = "repo:" + ExternalOwner + "@" + Slot + "/" + Slot + "@" + Slot + ":" + Slot
+	return []Candidate{legacy, immutable}
 }
 
 // ExternalCandidate models a token minted from a repository the estate does
@@ -233,12 +295,13 @@ func EnvironmentGated(e model.Environment, protectedBranches []string) bool {
 	return false
 }
 
-// RenderSub renders the `sub` claim using the repository's OIDC subject
-// template (include_claim_keys). An empty template is GitHub's default:
-// repo:<owner>/<repo>:<context>.
-func RenderSub(keys []string, repo string, claims map[string]string) string {
+// RenderSub renders the sub claim using the repository's OIDC subject
+// template (include_claim_keys). prefix is the repo segment ("repo:o/r", or
+// "repo:o@ID/r@ID" for immutable subjects). GitHub always uses it for the
+// "repo" key, and the default template is prefix + ":" + context.
+func RenderSub(keys []string, prefix string, claims map[string]string) string {
 	if len(keys) == 0 {
-		return "repo:" + repo + ":" + claims["context"]
+		return prefix + ":" + claims["context"]
 	}
 	parts := make([]string, 0, len(keys))
 	for _, k := range keys {
@@ -246,7 +309,7 @@ func RenderSub(keys []string, repo string, claims map[string]string) string {
 		case "context":
 			parts = append(parts, claims["context"])
 		case "repo":
-			parts = append(parts, "repo:"+claims["repository"])
+			parts = append(parts, prefix)
 		default:
 			v, ok := claims[k]
 			if !ok {

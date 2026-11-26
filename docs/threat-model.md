@@ -45,6 +45,13 @@ Each candidate is a set of claims in which attacker-chosen parts are `*`. Trust 
 
 The repository's custom OIDC subject template (`include_claim_keys`) is honoured.
 
+**Immutable subject claims.** Since 15 July 2026, GitHub's default `sub` for new repositories is `repo:OWNER@OWNER-ID/REPO@REPO-ID:…`. The same applies to repositories renamed or transferred after that date, and to any repository or organisation that opts in. Custom templates keep the IDs in the `repo` segment. Wardmap chooses the format as follows:
+1. If GitHub reports the repository's `sub_claim_prefix`, Wardmap uses exactly that.
+2. Otherwise, if the repository was created after the cutoff or reports `use_immutable_subject: true`, it uses the immutable format.
+3. Otherwise it evaluates **both** formats, because an organisation-level opt-in or a rename cannot be ruled out.
+
+Offline snapshots have no IDs, so the IDs are treated as unknown. Trust written for name-only subjects is flagged by WM021 (name-squatting risk).
+
 ## Fail-safe contract
 
 When Wardmap is unsure, it errs towards reporting exposure. It never errs towards reporting safety.
