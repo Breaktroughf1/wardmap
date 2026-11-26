@@ -108,3 +108,43 @@ func TestAccessDeniedBecomesGap(t *testing.T) {
 		t.Fatal("403s must be recorded as collection gaps")
 	}
 }
+
+func TestLargeWorkflowAndEmptyRepo(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/repos/o/big":
+			_, _ = w.Write([]byte(`{"full_name":"o/big","default_branch":"main"}`))
+		case "/repos/o/big/contents/.github/workflows":
+			_, _ = w.Write([]byte(`[{"path":".github/workflows/ci.yml","type":"file"}]`))
+		case "/repos/o/big/contents/.github/workflows/ci.yml":
+			if r.Header.Get("Accept") == "application/vnd.github.raw" {
+				_, _ = w.Write([]byte("on: push\njobs:\n  a:\n    runs-on: x\n    steps: [{run: echo}]\n"))
+				return
+			}
+			_, _ = w.Write([]byte(`{"encoding":"none","content":"","size":1500000}`))
+		case "/repos/o/empty":
+			_, _ = w.Write([]byte(`{"full_name":"o/empty","default_branch":"main"}`))
+		case "/repos/o/empty/commits":
+			w.WriteHeader(409)
+			_, _ = w.Write([]byte(`{"message":"Git Repository is empty."}`))
+		default:
+			w.WriteHeader(404)
+			_, _ = w.Write([]byte(`{"message":"Not Found"}`))
+		}
+	}))
+	defer srv.Close()
+	c := &Client{BaseURL: srv.URL, HTTP: srv.Client(), UserAgent: "test"}
+	s, err := Collect(context.Background(), c, Options{Repos: []string{"o/big", "o/empty"}, Hunt: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	big := s.Repos[0]
+	if len(big.Workflows) != 1 || big.Workflows[0].ParseError != "" || len(big.Workflows[0].Jobs) != 1 {
+		t.Fatalf("large workflow not fetched raw: %+v", big.Workflows)
+	}
+	for _, g := range s.Gaps {
+		if strings.Contains(g, "o/empty commits") || strings.Contains(g, "409") {
+			t.Errorf("an empty repository's 409 must not produce a gap: %s", g)
+		}
+	}
+}

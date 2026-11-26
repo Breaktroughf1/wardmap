@@ -340,15 +340,28 @@ func (col *collector) workflows(ctx context.Context, r *model.Repo) {
 		var f struct {
 			Content  string `json:"content"`
 			Encoding string `json:"encoding"`
+			Size     int    `json:"size"`
 		}
-		if _, err := col.c.Get(ctx, "/repos/"+r.FullName+"/contents/"+e.Path+"?ref="+ref, &f); err != nil {
+		path := "/repos/" + r.FullName + "/contents/" + e.Path + "?ref=" + ref
+		if _, err := col.c.Get(ctx, path, &f); err != nil {
 			col.gap("%s %s: %v", r.FullName, e.Path, short(err))
 			continue
 		}
-		data, err := base64.StdEncoding.DecodeString(strings.ReplaceAll(f.Content, "\n", ""))
-		if err != nil {
-			col.gap("%s %s: bad encoding", r.FullName, e.Path)
-			continue
+		var data []byte
+		if f.Encoding == "base64" && (f.Content != "" || f.Size == 0) {
+			var err error
+			if data, err = base64.StdEncoding.DecodeString(strings.ReplaceAll(f.Content, "\n", "")); err != nil {
+				col.gap("%s %s: bad encoding", r.FullName, e.Path)
+				continue
+			}
+		} else {
+			// Large files come back with encoding "none" and no content.
+			raw, err := col.c.GetRaw(ctx, path)
+			if err != nil {
+				col.gap("%s %s: %v", r.FullName, e.Path, short(err))
+				continue
+			}
+			data = raw
 		}
 		r.Workflows = append(r.Workflows, workflow.Parse(e.Path, data))
 	}
@@ -410,6 +423,9 @@ func (col *collector) hunt(ctx context.Context, r *model.Repo) {
 	}
 	var commits []apiCommit
 	err := paginate(ctx, col.c, base+"/commits?per_page=100&since="+url.QueryEscape(since.Format(time.RFC3339)), func(p []apiCommit) { commits = append(commits, p...) })
+	if IsEmptyRepo(err) {
+		return // no commits, so nothing else to hunt in
+	}
 	if err != nil {
 		col.gap("%s commits: %v", r.FullName, short(err))
 	}
@@ -426,7 +442,7 @@ func (col *collector) hunt(ctx context.Context, r *model.Repo) {
 				}
 			}
 		} else if i == col.o.MaxCommitFiles {
-			col.gap("%s: file lists collected for the newest %d commits only", r.FullName, col.o.MaxCommitFiles)
+			col.gap("%s: hunt sampled file lists for the newest %d of %d commits since %s (raise with --max-commit-files)", r.FullName, col.o.MaxCommitFiles, len(commits), since.Format("2006-01-02"))
 		}
 		r.Commits = append(r.Commits, mc)
 	}

@@ -1,6 +1,9 @@
 package workflow
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 const deploy = `
 name: deploy
@@ -87,6 +90,15 @@ func TestParse(t *testing.T) {
 	c := w.Jobs[1]
 	if !c.InheritsAll || len(c.Steps) != 1 || c.Steps[0].Pinned {
 		t.Fatalf("reusable call %+v", c)
+	}
+}
+
+func TestParseErrorMessages(t *testing.T) {
+	if w := Parse("e.yml", []byte("# only a comment\n")); w.ParseError != "empty workflow file" {
+		t.Errorf("got %q", w.ParseError)
+	}
+	if w := Parse("l.yml", []byte("- a\n- b\n")); !strings.Contains(w.ParseError, "list") {
+		t.Errorf("got %q", w.ParseError)
 	}
 }
 

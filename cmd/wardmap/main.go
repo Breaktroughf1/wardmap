@@ -99,6 +99,7 @@ type common struct {
 	dir        string
 	noProgress bool
 	offline    bool
+	maxFiles   int
 }
 
 func newFlags(name string) *common {
@@ -123,6 +124,7 @@ func newFlags(name string) *common {
 	c.fs.StringVar(&c.iocs, "iocs", "", "directory of extra or replacement IOC packs")
 	c.fs.StringVar(&c.dir, "dir", ".", "repository checkout for `local`")
 	c.fs.BoolVar(&c.noProgress, "quiet", false, "suppress progress output")
+	c.fs.IntVar(&c.maxFiles, "max-commit-files", 60, "hunt: commits per repository whose changed-file lists are fetched")
 	c.fs.BoolVar(&c.offline, "offline", false, "run: scan workflows from --dir instead of calling the GitHub API")
 	return c
 }
@@ -274,7 +276,7 @@ func collect(ctx context.Context, c *common, stderr io.Writer) (*model.Snapshot,
 	}
 	client := &gh.Client{BaseURL: orDefault(os.Getenv("GITHUB_API_URL"), "https://api.github.com"), Token: token,
 		HTTP: &http.Client{Timeout: 60 * time.Second}, UserAgent: "wardmap/" + version}
-	opts := gh.Options{Owner: c.org, Repos: c.repos, Hunt: c.huntMode, Since: since}
+	opts := gh.Options{Owner: c.org, Repos: c.repos, Hunt: c.huntMode, Since: since, MaxCommitFiles: c.maxFiles}
 	if !c.noProgress {
 		opts.Progress = func(s string) { fmt.Fprintln(stderr, s) }
 	}

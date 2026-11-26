@@ -38,6 +38,7 @@ var Rules = []Rule{
 	{"WM016", "collection-gap", "Data could not be collected", "Grant the read permissions listed in docs/permissions.md, or provide an offline export."},
 	{"WM017", "secrets-inherit-to-third-party", "All secrets passed to a third-party reusable workflow", "Pass only the secrets the called workflow needs."},
 	{"WM018", "workflow-parse-error", "Workflow could not be parsed", "Fix the YAML; Wardmap skips unparsable workflows."},
+	{"WM019", "github-token-in-secrets", "GitHub personal access token stored as an Actions secret", "Use GITHUB_TOKEN with scoped permissions or a GitHub App installation token; if a PAT is unavoidable, make it fine-grained, limited to the target repositories, and keep it in a gated environment."},
 }
 
 // Markdown writes a human-readable report.

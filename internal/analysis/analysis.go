@@ -239,7 +239,8 @@ func (a *analyzer) secretReach() {
 			a.add("WM002", Medium, r.FullName, "", r.FullName,
 				fmt.Sprintf("%d secret(s) are readable from any branch of %s by anyone with write access (the wfx-loot/GhostAction technique): %s. Move deployment secrets to protected environments.", len(ungated), r.FullName, strings.Join(ungated, ", ")))
 		}
-		if len(r.ProtectedBranches) == 0 && len(r.Branches) == 0 {
+		empty := len(r.Workflows) == 0 && len(r.Secrets) == 0 && len(r.Environments) == 0
+		if len(r.ProtectedBranches) == 0 && len(r.Branches) == 0 && !empty {
 			a.add("WM016", Info, r.FullName, "", r.FullName+"/branches",
 				"Branch protection for "+r.FullName+" was not collected; every branch is treated as pushable by a write credential.")
 		}
@@ -429,12 +430,26 @@ func (a *analyzer) workflowRules() {
 
 var staticCloudSecret = regexp.MustCompile(`(?i)^(AWS_SECRET_ACCESS_KEY|AWS_ACCESS_KEY_ID|AWS_ACCESS_KEY|AWS_SECRET_KEY|AZURE_CREDENTIALS|AZURE_CLIENT_SECRET|ARM_CLIENT_SECRET|GCP_SA_KEY|GCP_CREDENTIALS|GOOGLE_CREDENTIALS|GOOGLE_APPLICATION_CREDENTIALS|GCLOUD_SERVICE_KEY|.*_SERVICE_ACCOUNT_KEY|.*_SA_KEY|DO_TOKEN|DIGITALOCEAN_ACCESS_TOKEN)$`)
 
+var (
+	sshKeySecret = regexp.MustCompile(`(?i)SSH.*(KEY|PRIVATE|PEM)|(KEY|PRIVATE).*SSH|(^|_)(ID_RSA|ID_ED25519|PEM_KEY)$`)
+	// githubTokenSecret matches names that conventionally hold GitHub
+	// personal access tokens. GITHUB_TOKEN itself cannot be a secret.
+	githubTokenSecret = regexp.MustCompile(`(?i)(^|_)(PAT|GH_TOKEN|GH_PAT|GITHUB_PAT|PERSONAL_ACCESS_TOKEN)$|^(PAT|GH|GITHUB)_[A-Z0-9_]*TOKEN$|_PAT_`)
+)
+
 func (a *analyzer) secretHygiene() {
 	stale := a.o.Now.AddDate(0, 0, -a.o.StaleDays)
 	check := func(repo, scope string, s model.Secret) {
 		if staticCloudSecret.MatchString(s.Name) {
 			a.add("WM011", Medium, repo, "", "static|"+scope+"/"+s.Name,
 				"Secret "+scope+"/"+s.Name+" looks like a long-lived cloud credential. Replace it with GitHub OIDC federation and delete the key.")
+		} else if sshKeySecret.MatchString(s.Name) {
+			a.add("WM011", Medium, repo, "", "static|"+scope+"/"+s.Name,
+				"Secret "+scope+"/"+s.Name+" looks like a long-lived SSH private key for a server. Anyone who can read it can log in to that host. Prefer short-lived access (for example AWS SSM or EC2 Instance Connect via OIDC), or at least keep the key in an environment with required reviewers and rotate it.")
+		}
+		if githubTokenSecret.MatchString(s.Name) && s.Name != "GITHUB_TOKEN" {
+			a.add("WM019", Medium, repo, "", "pat|"+scope+"/"+s.Name,
+				"Secret "+scope+"/"+s.Name+" looks like a GitHub personal access token. Whoever can read it acts as the token's owner on every repository the token reaches: the lateral-movement path stolen credentials give an attacker. Prefer GITHUB_TOKEN with scoped permissions (for example packages: write for GHCR) or a GitHub App installation token; otherwise use a fine-grained token limited to the target repositories, kept in an environment with required reviewers.")
 		}
 		if !s.UpdatedAt.IsZero() && s.UpdatedAt.Before(stale) {
 			a.add("WM010", Low, repo, "", "stale|"+scope+"/"+s.Name,

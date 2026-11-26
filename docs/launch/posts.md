@@ -48,7 +48,7 @@ Rules for all posts:
 
 > After wfx-loot (4,837 hijacked accounts, 61,764 repos probed, stealer ran in about 1,800) I wanted one command to answer "if this account or branch is compromised, what falls?"
 >
-> Wardmap joins GitHub secret scoping (repo/org/environment secrets, reviewers, branch policies, branch protection) with cloud OIDC trust (AWS role trust, Entra federated credentials, GCP WIF conditions). It outputs a reach graph, 18 rules as SARIF, and a CI baseline gate that fails on *new* reach.
+> Wardmap joins GitHub secret scoping (repo/org/environment secrets, reviewers, branch policies, branch protection) with cloud OIDC trust (AWS role trust, Entra federated credentials, GCP WIF conditions). It outputs a reach graph, 19 rules as SARIF, and a CI baseline gate that fails on *new* reach.
 >
 > Things it catches that are easy to miss:
 > - `repo:org/*` trust, which means every repo in the org can assume the role

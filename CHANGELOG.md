@@ -7,9 +7,19 @@ First stable release.
 ### Stability promises (until v2)
 
 - Snapshot schema version 1 stays readable; new fields are additive.
-- Rule IDs `WM001`–`WM018` keep their meaning, and SARIF `partialFingerprints` stay stable, so baselines and code-scanning alerts carry over.
+- Rule IDs `WM001`–`WM019` keep their meaning, and SARIF `partialFingerprints` stay stable, so baselines and code-scanning alerts carry over.
 - CLI exit codes: `0` ok, `1` threshold exceeded or new reach, `2` error.
 - IOC packs keep shipping as data, with a version per pack.
+
+### Fixed and added after the first real-organisation scan
+
+Running v0.9.0 against a 33-repository organisation found these gaps:
+
+- **New rule WM019:** GitHub personal access tokens stored as Actions secrets (for example `*_SYNC_PAT`, `GHCR_PAT`) are flagged. Whoever can read one can act as its owner on every repository it reaches.
+- WM011 also flags server SSH private keys stored as secrets (for example `EC2_SSH_KEY`).
+- Workflow files that the contents API does not inline (large files) are now fetched raw instead of being reported as unparsable. Parse errors now say whether a file was empty or the wrong shape.
+- Empty repositories no longer produce a collection gap or a branch-protection notice.
+- The hunt's commit sampling limit is worded as a sampling limit, not a permission gap, and can be raised with `--max-commit-files`.
 
 ### Added since v0.9.0
 

@@ -45,6 +45,42 @@ func IsAccessDenied(err error) bool {
 
 var nextLinkRe = regexp.MustCompile(`<([^>]+)>;\s*rel="next"`)
 
+// IsEmptyRepo reports whether err is GitHub's 409 for a repository with no
+// commits.
+func IsEmptyRepo(err error) bool {
+	var se *StatusError
+	return errors.As(err, &se) && se.Code == 409
+}
+
+// GetRaw fetches a file's raw bytes (contents API, raw media type). Used when
+// the JSON contents response does not inline the file.
+func (c *Client) GetRaw(ctx context.Context, path string) ([]byte, error) {
+	u := strings.TrimSuffix(c.BaseURL, "/") + path
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Accept", "application/vnd.github.raw")
+	req.Header.Set("X-GitHub-Api-Version", "2022-11-28")
+	req.Header.Set("User-Agent", c.UserAgent)
+	if c.Token != "" {
+		req.Header.Set("Authorization", "Bearer "+c.Token)
+	}
+	resp, err := c.HTTP.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 8<<20))
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode < 200 || resp.StatusCode > 299 {
+		return nil, &StatusError{Code: resp.StatusCode, URL: redact(u), Msg: http.StatusText(resp.StatusCode)}
+	}
+	return body, nil
+}
+
 // Get fetches path (relative to BaseURL, or absolute) into v and returns the
 // next-page URL, if any.
 func (c *Client) Get(ctx context.Context, path string, v any) (string, error) {

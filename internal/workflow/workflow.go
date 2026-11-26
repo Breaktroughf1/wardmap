@@ -36,8 +36,12 @@ func Parse(path string, data []byte) model.Workflow {
 		w.ParseError = err.Error()
 		return w
 	}
-	if len(root.Content) == 0 || root.Content[0].Kind != yaml.MappingNode {
-		w.ParseError = "workflow is not a mapping"
+	if len(root.Content) == 0 {
+		w.ParseError = "empty workflow file"
+		return w
+	}
+	if root.Content[0].Kind != yaml.MappingNode {
+		w.ParseError = fmt.Sprintf("top level is a %s, expected a mapping with on: and jobs:", kindName(root.Content[0].Kind))
 		return w
 	}
 	doc := root.Content[0]
@@ -128,6 +132,18 @@ func endpoints(text string) []string {
 	out = append(out, urlRe.FindAllString(text, -1)...)
 	out = append(out, ipv4Re.FindAllString(text, -1)...)
 	return uniq(out)
+}
+
+func kindName(k yaml.Kind) string {
+	switch k {
+	case yaml.SequenceNode:
+		return "list"
+	case yaml.ScalarNode:
+		return "plain value"
+	case yaml.AliasNode:
+		return "alias"
+	}
+	return "document"
 }
 
 func triggers(n *yaml.Node) (trig []string, push []string) {

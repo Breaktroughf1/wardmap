@@ -83,6 +83,31 @@ func TestAnalyze(t *testing.T) {
 	}
 }
 
+func TestTokenAndKeySecrets(t *testing.T) {
+	s := &model.Snapshot{Repos: []model.Repo{
+		{FullName: "o/app", Branches: []string{"main"}, Secrets: []model.Secret{
+			{Name: "LYNX_SYNC_PAT"}, {Name: "GHCR_PAT"}, {Name: "GH_TOKEN"}, {Name: "EC2_SSH_KEY"},
+			{Name: "DEPLOY_SSH_PRIVATE_KEY"}, {Name: "SLACK_WEBHOOK"}, {Name: "PATH_PREFIX"}, {Name: "NPM_TOKEN"},
+		}},
+		{FullName: "o/empty"},
+	}}
+	got := map[string][]string{}
+	for _, f := range Analyze(s, Options{}).Findings {
+		got[f.RuleID] = append(got[f.RuleID], f.Key)
+	}
+	if len(got["WM019"]) != 3 {
+		t.Errorf("want LYNX_SYNC_PAT, GHCR_PAT and GH_TOKEN flagged as PATs, got %v", got["WM019"])
+	}
+	if len(got["WM011"]) != 2 {
+		t.Errorf("want two SSH keys flagged, got %v", got["WM011"])
+	}
+	for _, k := range got["WM016"] {
+		if k == "o/empty/branches" {
+			t.Error("empty repository should not get a branch-protection notice")
+		}
+	}
+}
+
 func TestFingerprintStable(t *testing.T) {
 	a := Analyze(snap(), Options{})
 	b := Analyze(snap(), Options{})

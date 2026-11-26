@@ -48,7 +48,7 @@ Today is day 0 (Thu 26 Nov 2026). The launch is day 6 (Wed 2 Dec), avoiding a Fr
 | Day | Status |
 |---|---|
 | 0 | Done: engine, rules, Action, CI, docs. |
-| 1 | **Partly done.** Live collection tested against GitHub on this repository; it worked, and the report issues it exposed are fixed. **Waiting on the owner:** scanning your own org (the build session can only reach this repository), scans of design-partner orgs, private vulnerability reporting, and the trademark search. |
+| 1 | **Done** except design partners. A live scan of the owner's 33-repository organisation ran cleanly, no IOCs matched, and the gaps it exposed are fixed in v1.0.0 (WM019, SSH keys, raw-file fallback, empty repositories). Preliminary trademark check done. **Waiting on the owner:** design-partner scans and private vulnerability reporting. |
 | 2 | Done: IOC packs 2026.11.26.2, Entra audit import, CloudTrail persistence events. **Open:** checking indicators against the researchers' original posts. |
 | 3 | Done: demo screenshots of the fictional estate in `docs/img/`. |
 | 4 | **Prepared:** v0.9.0 CHANGELOG and release notes on `main`. **Waiting on the owner:** pushing the tag (the build session may not push tags); Marketplace listing text is in `docs/launch/marketplace.md`. |

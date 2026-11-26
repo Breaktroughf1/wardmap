@@ -14,13 +14,14 @@
 | <a id="wm008"></a>WM008 | high | id-token-on-untrusted-trigger | `id-token: write` on `pull_request_target`, `workflow_run` or comment triggers. |
 | <a id="wm009"></a>WM009 | medium | secret-to-unpinned-action | A secret passed to a third-party action that is not pinned to a commit SHA. |
 | <a id="wm010"></a>WM010 | low | stale-secret | A secret older than `--stale-days` (default 180). |
-| <a id="wm011"></a>WM011 | medium | static-cloud-credential | A long-lived cloud key stored as a secret, or a cloud login that does not use OIDC. |
+| <a id="wm011"></a>WM011 | medium | static-cloud-credential | A long-lived cloud key or server SSH private key stored as a secret, or a cloud login that does not use OIDC. |
 | <a id="wm012"></a>WM012 | critical | cloud-persistence-indicator | An AWS wildcard principal or a `wfx-ci-*` Entra federated credential. |
 | <a id="wm013"></a>WM013 | critical | gcp-provider-without-condition | A GCP provider for GitHub with no attribute condition. |
 | <a id="wm014"></a>WM014 | low | trust-needs-review | A condition Wardmap cannot evaluate. Never reported as safe. |
 | <a id="wm015"></a>WM015 | high | pull-request-target-checkout | A "pwn request": PR code runs with secrets or id-token. |
 | <a id="wm016"></a>WM016 | info | collection-gap | Data could not be collected; results for that scope are incomplete. |
 | <a id="wm017"></a>WM017 | low | secrets-inherit-to-third-party | `secrets: inherit` passes every secret to a third-party reusable workflow. |
-| <a id="wm018"></a>WM018 | info | workflow-parse-error | The workflow YAML could not be parsed. |
+| <a id="wm018"></a>WM018 | info | workflow-parse-error | The workflow YAML could not be parsed (the message says whether it was empty or the wrong shape). |
+| <a id="wm019"></a>WM019 | medium | github-token-in-secrets | A GitHub personal access token is stored as a secret. Anyone who can read it can act as its owner on every repository it reaches, which is a lateral-movement path. Prefer `GITHUB_TOKEN` or a GitHub App token. |
 
 Each finding has a stable fingerprint (`partialFingerprints["wardmap/v1"]`). Baselines use it, and code scanning uses it to track alerts across runs.
