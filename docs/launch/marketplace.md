@@ -26,10 +26,10 @@ permissions:
 steps:
   - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
     with: { persist-credentials: false }
-  - uses: Breaktroughf1/wardmap@<v1.0.0 commit SHA> # v1.0.0
+  - uses: Breaktroughf1/wardmap@2651e014d3ff71f1ba93ed964cbbc45c6edaccc4 # v1.0.0
     with:
       mode: offline
       fail-on: high
 ```
 
-Replace `<v1.0.0 commit SHA>` with the commit the v1.0.0 tag points to (`git rev-list -n1 v1.0.0`). Then update the same line in README.md.
+`2651e014d3ff71f1ba93ed964cbbc45c6edaccc4` is the commit the v1.0.0 tag points to; README.md uses the same pin.

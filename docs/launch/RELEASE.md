@@ -39,15 +39,15 @@ gh attestation verify wardmap_v0.9.0_darwin_arm64 --repo Breaktroughf1/wardmap &
 
 ## 3. Cut v1.0.0
 
-The `## v1.0.0` section is already at the top of CHANGELOG.md. Update its date if needed, remove the "Pre-release" note from README.md, commit, then:
+The release commit is ready on `main`: "Release v1.0.0" (`2651e01`). The CHANGELOG is dated, the pre-release notice is gone, and the README Action pin points at this commit. Tag exactly that commit:
 
 ```bash
-git tag -a v1.0.0 -m "Wardmap v1.0.0" && git push origin main v1.0.0
+git pull && git tag -a v1.0.0 2651e014d3ff71f1ba93ed964cbbc45c6edaccc4 -m "Wardmap v1.0.0" && git push origin v1.0.0
 ```
 
 After the release is published:
 - [ ] Publish the Action to the Marketplace (docs/launch/marketplace.md).
-- [ ] Replace `<full-commit-sha>` in the README Action snippet with `git rev-list -n1 v1.0.0`.
+- [x] README Action snippet pinned to the v1.0.0 commit.
 
 ## 4. Launch day
 
