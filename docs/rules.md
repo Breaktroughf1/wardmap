@@ -11,7 +11,7 @@
 | <a id="wm005"></a>WM005 | low | trust-missing-audience | AWS trust has no `aud` check. This is defence in depth only, because the requester chooses `aud`. |
 | <a id="wm006"></a>WM006 | critical | trust-admits-any-github-repository | Anyone on GitHub can obtain the identity. |
 | <a id="wm007"></a>WM007 | medium | ungated-environment-with-secrets | An environment with secrets but no reviewers and no protected-branch restriction. |
-| <a id="wm008"></a>WM008 | high | id-token-on-untrusted-trigger | `id-token: write` on `pull_request_target`, `workflow_run` or comment triggers. |
+| <a id="wm008"></a>WM008 | high | id-token-on-untrusted-trigger | `id-token: write` on `pull_request_target`, comment triggers, or a `workflow_run` whose source workflows are not all maintainer-triggered (`push`, `schedule`, `workflow_dispatch`, `release`) workflows in the same repository. |
 | <a id="wm009"></a>WM009 | medium | secret-to-unpinned-action | A secret passed to a third-party action that is not pinned to a commit SHA. |
 | <a id="wm010"></a>WM010 | low | stale-secret | A secret older than `--stale-days` (default 180). |
 | <a id="wm011"></a>WM011 | medium | static-cloud-credential | A long-lived cloud key or server SSH private key stored as a secret, or a cloud login that does not use OIDC. |

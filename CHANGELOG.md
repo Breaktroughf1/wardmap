@@ -9,6 +9,7 @@ Wardmap is now installable from every common channel, each delivering the same s
 - **Container image** `ghcr.io/breaktroughf1/wardmap`: distroless and non-root, built from the verified archives for linux/amd64 and linux/arm64, signed with cosign and attested.
 - **Homebrew:** `brew install breaktroughf1/tap/wardmap`.
 - CI builds the archives on every push and tests both launchers, including refusal of tampered downloads and tampered cached binaries.
+- WM008 now resolves `workflow_run` sources. Such a trigger is trusted only when every source workflow is in the repository and starts solely on `push`, `schedule`, `workflow_dispatch` or `release`. Unresolved sources still fail safe as untrusted. Found by Wardmap scanning its own new publishing workflows.
 - Packaging and container publishing start from the release workflow's completion (`workflow_run`), because a release created with `GITHUB_TOKEN` does not trigger other workflows.
 
 ## v1.0.1 — 2026-11-26

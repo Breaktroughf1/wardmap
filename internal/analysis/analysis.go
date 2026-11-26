@@ -400,6 +400,9 @@ func (a *analyzer) workflowRules() {
 			}
 			var risky []string
 			for _, t := range w.Triggers {
+				if t == "workflow_run" && trustedRunSources(r, w) {
+					continue
+				}
 				if untrustedTriggers[t] {
 					risky = append(risky, t)
 				}
@@ -433,6 +436,40 @@ func (a *analyzer) workflowRules() {
 			}
 		}
 	}
+}
+
+// maintainerTriggers can only be started by people with write access (or by
+// a schedule), never by an outside contributor's pull request or comment.
+var maintainerTriggers = map[string]bool{"push": true, "schedule": true, "workflow_dispatch": true, "release": true}
+
+// trustedRunSources reports whether every workflow that can fire w's
+// workflow_run trigger is in this repository and itself starts only on
+// maintainer triggers. Anything unresolved counts as untrusted (fail safe).
+func trustedRunSources(r model.Repo, w model.Workflow) bool {
+	if len(w.RunSources) == 0 {
+		return false
+	}
+	for _, src := range w.RunSources {
+		found := false
+		for _, o := range r.Workflows {
+			if o.ParseError != "" || (o.Name != src && !(o.Name == "" && o.Path == src)) {
+				continue
+			}
+			found = true
+			if len(o.Triggers) == 0 {
+				return false
+			}
+			for _, t := range o.Triggers {
+				if !maintainerTriggers[t] {
+					return false
+				}
+			}
+		}
+		if !found {
+			return false
+		}
+	}
+	return true
 }
 
 var staticCloudSecret = regexp.MustCompile(`(?i)^(AWS_SECRET_ACCESS_KEY|AWS_ACCESS_KEY_ID|AWS_ACCESS_KEY|AWS_SECRET_KEY|AZURE_CREDENTIALS|AZURE_CLIENT_SECRET|ARM_CLIENT_SECRET|GCP_SA_KEY|GCP_CREDENTIALS|GOOGLE_CREDENTIALS|GOOGLE_APPLICATION_CREDENTIALS|GCLOUD_SERVICE_KEY|.*_SERVICE_ACCOUNT_KEY|.*_SA_KEY|DO_TOKEN|DIGITALOCEAN_ACCESS_TOKEN)$`)

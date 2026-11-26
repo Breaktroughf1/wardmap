@@ -140,3 +140,34 @@ func TestUnknownTemplateFailsClosed(t *testing.T) {
 		t.Fatalf("trust for an unreadable custom template must be a HIGH needs-review finding, got %+v", hit)
 	}
 }
+
+func TestWorkflowRunTrust(t *testing.T) {
+	job := []model.Job{{ID: "publish", IDTokenWrite: true}}
+	mk := func(sources []string, srcTriggers []string) *model.Snapshot {
+		return &model.Snapshot{Repos: []model.Repo{{FullName: "o/r", Branches: []string{"main"}, Workflows: []model.Workflow{
+			{Path: ".github/workflows/release.yml", Name: "release", Triggers: srcTriggers},
+			{Path: ".github/workflows/packages.yml", Name: "packages", Triggers: []string{"workflow_run"}, RunSources: sources, Jobs: job},
+		}}}}
+	}
+	count := func(s *model.Snapshot) int {
+		n := 0
+		for _, f := range Analyze(s, Options{}).Findings {
+			if f.RuleID == "WM008" {
+				n++
+			}
+		}
+		return n
+	}
+	if n := count(mk([]string{"release"}, []string{"push"})); n != 0 {
+		t.Errorf("workflow_run from a tag-push-only workflow is trusted, got %d WM008", n)
+	}
+	if n := count(mk([]string{"release"}, []string{"push", "pull_request"})); n != 1 {
+		t.Errorf("workflow_run from a pull_request workflow is untrusted, got %d", n)
+	}
+	if n := count(mk([]string{"missing"}, []string{"push"})); n != 1 {
+		t.Errorf("an unresolvable source must fail safe, got %d", n)
+	}
+	if n := count(mk(nil, []string{"push"})); n != 1 {
+		t.Errorf("workflow_run without sources must fail safe, got %d", n)
+	}
+}

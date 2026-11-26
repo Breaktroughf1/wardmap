@@ -51,6 +51,17 @@ func Parse(path string, data []byte) model.Workflow {
 		onNode = mapGet(doc, "true") // YAML 1.1 parsers turn `on` into true
 	}
 	w.Triggers, w.PushBranches = triggers(onNode)
+	if n := mapGet(doc, "name"); n != nil && n.Kind == yaml.ScalarNode {
+		w.Name = n.Value
+	}
+	if wr := mapGet(mapGet(onNode, "workflow_run"), "workflows"); wr != nil {
+		if wr.Kind == yaml.ScalarNode {
+			w.RunSources = []string{wr.Value}
+		}
+		for _, c := range wr.Content {
+			w.RunSources = append(w.RunSources, c.Value)
+		}
+	}
 	topIDToken := idTokenWrite(mapGet(doc, "permissions"))
 	topEnvSecrets := secretRefs(mapGet(doc, "env"))
 

@@ -115,3 +115,10 @@ func FuzzParse(f *testing.F) {
 		_ = Parse("f.yml", b)
 	})
 }
+
+func TestWorkflowRunSources(t *testing.T) {
+	w := Parse("p.yml", []byte("name: packages\non:\n  workflow_run:\n    workflows: [release, build]\n    types: [completed]\njobs:\n  a:\n    runs-on: x\n    steps: [{run: echo}]\n"))
+	if w.Name != "packages" || len(w.RunSources) != 2 || w.RunSources[0] != "release" {
+		t.Fatalf("%+v", w)
+	}
+}

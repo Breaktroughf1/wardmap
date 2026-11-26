@@ -114,8 +114,11 @@ const (
 
 // Workflow is a parsed workflow file.
 type Workflow struct {
-	Path     string   `json:"path"`
-	Triggers []string `json:"triggers"`
+	Path string `json:"path"`
+	Name string `json:"name,omitempty"`
+	// RunSources are the workflow names listed under on.workflow_run.workflows.
+	RunSources []string `json:"workflow_run_sources,omitempty"`
+	Triggers   []string `json:"triggers"`
 	// PushBranches are the branch filters on the push trigger ("*" if none).
 	PushBranches []string `json:"push_branches,omitempty"`
 	Jobs         []Job    `json:"jobs"`
