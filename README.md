@@ -99,7 +99,7 @@ permissions:
 steps:
   - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
     with: { persist-credentials: false }
-  - uses: Breaktroughf1/wardmap@2651e014d3ff71f1ba93ed964cbbc45c6edaccc4 # v1.0.0
+  - uses: Breaktroughf1/wardmap@08c1f76c11324a01e12d11e5c866752f9c4abb45 # v1.0.0
     with:
       mode: offline          # no token needed; or `live` with a read-only token
       fail-on: high

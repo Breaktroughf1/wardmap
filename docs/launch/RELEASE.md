@@ -31,7 +31,7 @@ gh attestation verify wardmap_v0.9.0_darwin_arm64 --repo Breaktroughf1/wardmap &
 
 ## 2. Before v1.0.0
 
-- [ ] Run a live scan on your own org and fix anything it shows: `wardmap collect --org Breaktroughf1 --hunt`.
+- [x] Run a live scan on your own org and fix anything it shows. Done 26 Nov 2026: 33 repositories, no IOCs; the gaps it exposed are fixed in v1.0.0.
 - [ ] Scan 2–3 design-partner orgs, with their written consent. Only anonymised aggregates go into the blog post.
 - [ ] Turn on private vulnerability reporting: Settings → Code security.
 - [x] Do a trademark search for "Wardmap". Preliminary desk search done (docs/launch/name-check.md); a lawyer still needs to clear it, because WORDMAP is a close live US mark.
@@ -39,10 +39,10 @@ gh attestation verify wardmap_v0.9.0_darwin_arm64 --repo Breaktroughf1/wardmap &
 
 ## 3. Cut v1.0.0
 
-The release commit is ready on `main`: "Release v1.0.0" (`2651e01`). The CHANGELOG is dated, the pre-release notice is gone, and the README Action pin points at this commit. Tag exactly that commit:
+The release commit is ready on `main`: "Fix gaps found by the first real-organisation scan" (`08c1f76`). The CHANGELOG is dated, the pre-release notice is gone, and the README Action pin points at this commit. Tag exactly that commit:
 
 ```bash
-git pull && git tag -a v1.0.0 2651e014d3ff71f1ba93ed964cbbc45c6edaccc4 -m "Wardmap v1.0.0" && git push origin v1.0.0
+git pull && git tag -a v1.0.0 08c1f76c11324a01e12d11e5c866752f9c4abb45 -m "Wardmap v1.0.0" && git push origin v1.0.0
 ```
 
 After the release is published:
