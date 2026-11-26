@@ -1,0 +1,17 @@
+# Campaign-independent signals of CI credential theft.
+id: generic
+name: Generic CI credential-theft signals
+version: 2026.11.26
+indicators:
+  - id: oidc-from-deleted-branch
+    type: cloudtrail_deleted_branch
+    confidence: high
+    description: A cloud session was issued to a GitHub OIDC token from a branch that no longer exists (throwaway branch).
+  - id: oidc-unknown-repo
+    type: cloudtrail_unknown_repo
+    confidence: medium
+    description: A cloud session was issued to a repository outside the collected estate.
+  - id: oidc-pull-request
+    type: cloudtrail_pull_request
+    confidence: medium
+    description: A cloud session was issued to a pull_request token.

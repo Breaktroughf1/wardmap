@@ -1,0 +1,7 @@
+/wardmap
+/dist/
+*.sarif
+cover.out
+# Snapshots describe your estate; keep them out of public repositories.
+wardmap-snapshot.json
+wardmap-baseline.local.json

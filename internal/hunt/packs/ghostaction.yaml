@@ -1,0 +1,33 @@
+# IOC pack: GhostAction (waves in 2025 and October 2026).
+# Generic file names such as audit.yml are low confidence on their own; look
+# for them in combination with the campaign window and unknown authors.
+id: ghostaction
+name: GhostAction secret exfiltration workflows
+version: 2026.11.26
+window:
+  start: 2026-10-08T00:00:00Z
+  end: 2026-10-20T00:00:00Z
+references:
+  - https://blog.gitguardian.com/
+  - https://www.decryptiondigest.com/blog/ghostaction-github-actions-supply-chain-2026
+indicators:
+  - id: ghost-security-audit
+    type: workflow_path
+    pattern: "*/security-audit.y*ml"
+    confidence: medium
+    description: Exfiltration workflow name used by GhostAction.
+  - id: ghost-audit
+    type: workflow_path
+    pattern: "*/audit.y*ml"
+    confidence: low
+    description: Generic name also used by GhostAction; confirm by content and author.
+  - id: ghost-ci-check
+    type: workflow_path
+    pattern: "*/ci-check.y*ml"
+    confidence: low
+    description: Generic name also used by GhostAction; confirm by content and author.
+  - id: ghost-commit-workflow
+    type: commit_file
+    pattern: ".github/workflows/security-audit.y*ml"
+    confidence: medium
+    description: Commit adding the GhostAction workflow.

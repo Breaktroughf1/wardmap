@@ -1,0 +1,56 @@
+name: ci
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
+        with:
+          go-version-file: go.mod
+      - name: gofmt
+        run: test -z "$(gofmt -l .)" || { gofmt -l .; exit 1; }
+      - run: go vet ./...
+      - run: go test -race -coverpkg=./... -coverprofile=cover.out ./...
+      - name: Coverage gate (75%)
+        run: |
+          total=$(go tool cover -func=cover.out | awk '/^total:/ {gsub("%","",$3); print $3}')
+          echo "coverage ${total}%"
+          awk -v t="$total" 'BEGIN { exit (t < 75) }'
+      - name: Fuzz (short)
+        run: |
+          go test -run '^$' -fuzz=FuzzParse -fuzztime=30s ./internal/workflow/
+          go test -run '^$' -fuzz=FuzzOverlapSelf -fuzztime=30s ./internal/glob/
+      - name: Demo estate
+        run: |
+          go run ./cmd/wardmap import -s examples/demo/snapshot.json -o "$RUNNER_TEMP/s.json" \
+            --aws examples/demo/aws-roles.json \
+            --azure examples/demo/fic-0b1c2d3e-4f50-6172-8394-a5b6c7d8e9f0.json \
+            --gcp examples/demo/gcp-providers.json --cloudtrail examples/demo/cloudtrail.json
+          go run ./cmd/wardmap scan -s "$RUNNER_TEMP/s.json" >> "$GITHUB_STEP_SUMMARY"
+          go run ./cmd/wardmap hunt -s "$RUNNER_TEMP/s.json" >> "$GITHUB_STEP_SUMMARY"
+
+  self-scan:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./
+        with:
+          mode: offline
+          fail-on: high
+          upload-sarif: ${{ github.event_name == 'push' && 'true' || 'false' }}

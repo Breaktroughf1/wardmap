@@ -1,0 +1,29 @@
+# Positioning
+
+Competitor facts below were checked on 26 Nov 2026. Re-check them before quoting in launch material.
+
+## The gap Wardmap fills
+
+Each existing tool covers one slice. None of them answers *"which secrets and cloud identities fall if this one write credential is compromised?"* across GitHub and three clouds, with a CI gate and incident hunting.
+
+| | Workflow lint | Live GitHub secret scoping | Environments / reviewers / branch protection | AWS trust | Azure FIC | GCP WIF | Attacker-mintable tokens (not just named roles) | Baseline gate | IOC hunt |
+|---|---|---|---|---|---|---|---|---|---|
+| zizmor / poutine | ✔ | | partial | | | | | | |
+| ActionScope (MIT, Python, v0.5.0 Aug 2026) | | | partial | ✔ | | | named roles only | | |
+| legitify | | posture | ✔ | | | | | | |
+| keyspan | | local files | | | | | | | |
+| aws-iam-trust-audit | | | | ✔ (offline) | | | | | |
+| **Wardmap** | defers to zizmor | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ |
+
+## What we deliberately do not do
+
+- **Workflow linting.** Wardmap's workflow rules are limited to the ones that feed the reach graph. Recommend zizmor for everything else.
+- **Secret values or validation.** Kingfisher covers that.
+- **Runtime monitoring.** harden-runner covers that.
+- **Write or auto-remediation.** Wardmap stays read-only so it is safe to run with minimal permissions.
+
+## Messaging rules
+
+- Say "**probed** 61,764 repositories", not "compromised". Sources differ on how many repositories ran the payload: Aikido reports at least 1,835 in one place and 1,806 in another. OX Security counted 8,093 repositories with a malicious commit on the default branch. These figures measure different things.
+- Credit the researchers (Aikido, GitGuardian, StepSecurity, Endor Labs, OX Security) and link their primary write-ups.
+- Never imply that a clean report proves no compromise.

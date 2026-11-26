@@ -1,0 +1,92 @@
+name: Wardmap
+description: Map what a compromised CI credential can reach (secrets and cloud roles via GitHub OIDC) and gate on new reach.
+author: Noeal Rajeev
+branding:
+  icon: map
+  color: orange
+inputs:
+  mode:
+    description: "offline (workflows in this checkout only, no token needed) or live (GitHub API with a read-only token)"
+    default: offline
+  token:
+    description: Read-only token for live mode (fine-grained PAT or GitHub App token; see docs/permissions.md). Not needed offline.
+    default: ""
+  org:
+    description: Organisation or user to scan in live mode (default the current repository only)
+    default: ""
+  aws:
+    description: Path to an `aws iam list-roles` export (optional)
+    default: ""
+  azure:
+    description: Path to an Azure federated-credential export, [APPID=]FILE (optional)
+    default: ""
+  gcp:
+    description: Path to a GCP workload identity providers export (optional)
+    default: ""
+  baseline:
+    description: Approved baseline file; with it, only new findings and new reach fail the job
+    default: ""
+  fail-on:
+    description: Fail on findings at or above this severity (info, low, medium, high, critical, none)
+    default: high
+  upload-sarif:
+    description: Upload results to GitHub code scanning (needs security-events write)
+    default: "true"
+outputs:
+  sarif:
+    description: Path to the SARIF file
+    value: ${{ steps.scan.outputs.sarif }}
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
+      with:
+        go-version-file: ${{ github.action_path }}/go.mod
+        cache: false
+    - name: Build wardmap from the pinned action source
+      shell: bash
+      working-directory: ${{ github.action_path }}
+      run: go build -trimpath -o "$RUNNER_TEMP/wardmap" ./cmd/wardmap
+    - name: Scan
+      id: scan
+      shell: bash
+      env:
+        WARDMAP_GITHUB_TOKEN: ${{ inputs.token }}
+        IN_MODE: ${{ inputs.mode }}
+        IN_ORG: ${{ inputs.org }}
+        IN_AWS: ${{ inputs.aws }}
+        IN_AZURE: ${{ inputs.azure }}
+        IN_GCP: ${{ inputs.gcp }}
+        IN_BASELINE: ${{ inputs.baseline }}
+        IN_FAIL_ON: ${{ inputs.fail-on }}
+      run: |
+        set -euo pipefail
+        args=(run --format sarif -o "$RUNNER_TEMP/wardmap.sarif" --fail-on "$IN_FAIL_ON" --quiet)
+        if [ "$IN_MODE" = "offline" ]; then
+          args+=(--offline --dir . --repo "$GITHUB_REPOSITORY" --repo-relative "$GITHUB_REPOSITORY")
+        elif [ -n "$IN_ORG" ]; then
+          args+=(--org "$IN_ORG")
+        else
+          args+=(--repo "$GITHUB_REPOSITORY" --repo-relative "$GITHUB_REPOSITORY")
+        fi
+        if [ -n "$IN_AWS" ]; then args+=(--aws "$IN_AWS"); fi
+        if [ -n "$IN_AZURE" ]; then args+=(--azure "$IN_AZURE"); fi
+        if [ -n "$IN_GCP" ]; then args+=(--gcp "$IN_GCP"); fi
+        if [ -n "$IN_BASELINE" ]; then args+=(--baseline "$IN_BASELINE"); fi
+        echo "sarif=$RUNNER_TEMP/wardmap.sarif" >> "$GITHUB_OUTPUT"
+        code=0
+        "$RUNNER_TEMP/wardmap" "${args[@]}" || code=$?
+        echo "exit-code=$code" >> "$GITHUB_OUTPUT"
+    - name: Upload SARIF
+      if: inputs.upload-sarif == 'true'
+      uses: github/codeql-action/upload-sarif@915412ff23e8b7659517e607487dbeae018f2934 # v4.39.5
+      with:
+        sarif_file: ${{ steps.scan.outputs.sarif }}
+        category: wardmap
+    - name: Enforce threshold
+      shell: bash
+      env:
+        CODE: ${{ steps.scan.outputs.exit-code }}
+      run: |
+        if [ "$CODE" = "1" ]; then echo "::error::Wardmap found findings at or above the threshold, or new reach since the baseline"; exit 1; fi
+        if [ "$CODE" != "0" ]; then echo "::error::Wardmap failed (exit $CODE)"; exit 2; fi

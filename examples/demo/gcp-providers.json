@@ -1,0 +1,14 @@
+[
+  {
+    "name": "projects/123/locations/global/workloadIdentityPools/gh/providers/github",
+    "state": "ACTIVE",
+    "attributeCondition": "assertion.repository_owner == 'example-org'",
+    "attributeMapping": {
+      "google.subject": "assertion.sub",
+      "attribute.repository": "assertion.repository"
+    },
+    "oidc": {
+      "issuerUri": "https://token.actions.githubusercontent.com"
+    }
+  }
+]

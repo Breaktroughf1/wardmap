@@ -1,0 +1,68 @@
+{
+  "Roles": [
+    {
+      "RoleName": "api-prod-deploy",
+      "Arn": "arn:aws:iam::111122223333:role/api-prod-deploy",
+      "AssumeRolePolicyDocument": {
+        "Version": "2012-10-17",
+        "Statement": [
+          {
+            "Effect": "Allow",
+            "Principal": {
+              "Federated": "arn:aws:iam::111122223333:oidc-provider/token.actions.githubusercontent.com"
+            },
+            "Action": "sts:AssumeRoleWithWebIdentity",
+            "Condition": {
+              "StringEquals": {
+                "token.actions.githubusercontent.com:aud": "sts.amazonaws.com",
+                "token.actions.githubusercontent.com:sub": "repo:example-org/api:environment:production"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "RoleName": "api-staging",
+      "Arn": "arn:aws:iam::111122223333:role/api-staging",
+      "AssumeRolePolicyDocument": "%7B%22Version%22%3A%20%222012-10-17%22%2C%20%22Statement%22%3A%20%5B%7B%22Effect%22%3A%20%22Allow%22%2C%20%22Principal%22%3A%20%7B%22Federated%22%3A%20%22arn%3Aaws%3Aiam%3A%3A111122223333%3Aoidc-provider/token.actions.githubusercontent.com%22%7D%2C%20%22Action%22%3A%20%22sts%3AAssumeRoleWithWebIdentity%22%2C%20%22Condition%22%3A%20%7B%22StringEquals%22%3A%20%7B%22token.actions.githubusercontent.com%3Aaud%22%3A%20%22sts.amazonaws.com%22%2C%20%22token.actions.githubusercontent.com%3Asub%22%3A%20%22repo%3Aexample-org/api%3Aenvironment%3Astaging%22%7D%7D%7D%5D%7D"
+    },
+    {
+      "RoleName": "org-artifacts-read",
+      "Arn": "arn:aws:iam::111122223333:role/org-artifacts-read",
+      "AssumeRolePolicyDocument": {
+        "Version": "2012-10-17",
+        "Statement": [
+          {
+            "Effect": "Allow",
+            "Principal": {
+              "Federated": "arn:aws:iam::111122223333:oidc-provider/token.actions.githubusercontent.com"
+            },
+            "Action": "sts:AssumeRoleWithWebIdentity",
+            "Condition": {
+              "StringLike": {
+                "token.actions.githubusercontent.com:sub": "repo:example-org/*"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "RoleName": "legacy-ci-admin",
+      "Arn": "arn:aws:iam::111122223333:role/legacy-ci-admin",
+      "AssumeRolePolicyDocument": {
+        "Version": "2012-10-17",
+        "Statement": [
+          {
+            "Effect": "Allow",
+            "Principal": {
+              "AWS": "*"
+            },
+            "Action": "sts:AssumeRole"
+          }
+        ]
+      }
+    }
+  ]
+}

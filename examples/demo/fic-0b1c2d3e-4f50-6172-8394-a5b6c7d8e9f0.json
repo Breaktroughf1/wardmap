@@ -1,0 +1,18 @@
+[
+  {
+    "name": "api-main",
+    "issuer": "https://token.actions.githubusercontent.com",
+    "subject": "repo:example-org/api:ref:refs/heads/main",
+    "audiences": [
+      "api://AzureADTokenExchange"
+    ]
+  },
+  {
+    "name": "wfx-ci-3b9f",
+    "issuer": "https://token.actions.githubusercontent.com",
+    "subject": "repo:example-org/api:ref:refs/heads/wfx-docs-7c1e",
+    "audiences": [
+      "api://AzureADTokenExchange"
+    ]
+  }
+]

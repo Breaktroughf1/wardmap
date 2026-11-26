@@ -1,0 +1,73 @@
+# IOC pack: wfx-loot (November 2026).
+# Indicators are compiled from public write-ups (Aikido Security, GitGuardian,
+# Endor Labs, StepSecurity, OX Security, Barrier Networks). They are hunting
+# leads, not proof of compromise. Send corrections as pull requests.
+id: wfx-loot
+name: wfx-loot GitHub Actions secret stealer
+version: 2026.11.26
+window:
+  start: 2026-11-10T00:00:00Z
+references:
+  - https://www.aikido.dev/blog/compromised-github-accounts-push-ci-secret-stealer-to-tens-of-thousands-of-repositories
+  - https://blog.gitguardian.com/wfx-loot-a-ci-secret-stealer-pushed-with-stolen-github-credentials/
+  - https://www.endorlabs.com/learn/github-actions-supply-chain-attack-targeting-ci-secrets-at-scale
+  - https://www.stepsecurity.io/blog/wfx-phantom-the-github-actions-secret-stealer
+indicators:
+  - id: wfx-branch
+    type: branch_name
+    pattern: "wfx-docs*"
+    confidence: high
+    description: Probe branch created by the campaign.
+  - id: wfx-pr-title
+    type: pr_title
+    pattern: "docs: dependency audit notes*"
+    confidence: high
+    description: Title of the campaign's probe pull requests.
+  - id: wfx-pr-branch
+    type: pr_head_ref
+    pattern: "wfx-docs*"
+    confidence: high
+    description: Probe pull request opened from a wfx-docs branch.
+  - id: wfx-commit-cache
+    type: commit_message
+    pattern: "ci: refresh build cache*"
+    confidence: medium
+    description: Commit message used when injecting the payload into existing workflows.
+  - id: wfx-commit-restore
+    type: commit_message
+    pattern: "ci: restore*"
+    confidence: medium
+    description: Commit message used when reverting the injection to hide it.
+  - id: wfx-script
+    type: commit_file
+    pattern: "*/.ci-??????.sh"
+    confidence: high
+    description: Dropped payload script (.ci-xxxxxx.sh) in a subdirectory.
+  - id: wfx-script-root
+    type: commit_file
+    pattern: ".ci-??????.sh"
+    confidence: high
+    description: Dropped payload script at repository root.
+  - id: wfx-workflow
+    type: workflow_path
+    pattern: "*build-audit-*.yml"
+    confidence: high
+    description: Throwaway workflow file name.
+  - id: wfx-workflow-commit
+    type: commit_file
+    pattern: ".github/workflows/build-audit-*.y*ml"
+    confidence: high
+    description: Throwaway workflow added in a commit (even if later deleted).
+  - id: wfx-entra-fic
+    type: azure_fic_name
+    pattern: "wfx-ci-*"
+    confidence: high
+    description: Entra federated credential added for persistence.
+  - id: wfx-aws-trust
+    type: aws_wildcard_principal
+    confidence: high
+    description: AWS role trust rewritten to Principal {"AWS":"*"} for persistence.
+  - id: wfx-run-gap
+    type: run_number_gap
+    confidence: medium
+    description: Workflow runs deleted after execution leave gaps in run numbers.
