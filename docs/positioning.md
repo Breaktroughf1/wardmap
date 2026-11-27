@@ -10,6 +10,7 @@ Each existing tool covers one slice. None of them answers *"which secrets and cl
 |---|---|---|---|---|---|---|---|---|---|
 | zizmor / poutine | ✔ | | partial | | | | | | |
 | ActionScope (MIT, Python, v0.5.0 Aug 2026) | | | partial | ✔ | | | named roles only | | |
+| gha-oidc-auditor (Go, Apache-2.0, v0.1.0) | OIDC rules | not stated | partial (env gates in workflows) | ✔ | ✔ | ✔ | not modelled | fail-on only | |
 | TrustFix / oidc-audit | | | | ✔ (misconfig checks) | | | | | |
 | subcheck | | | | claims check of one token | | | | | |
 | gha-audit | ✔ | | | | | | | | |
@@ -17,6 +18,8 @@ Each existing tool covers one slice. None of them answers *"which secrets and cl
 | keyspan | | local files | | | | | | | |
 | aws-iam-trust-audit | | | | ✔ (offline) | | | | | |
 | **Wardmap** | defers to zizmor | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ |
+
+gha-oidc-auditor is the closest tool and is worth respecting: it generates least-privilege trust policies, which Wardmap does not. Recommend it for writing new policies, and Wardmap for proving what existing ones let an attacker reach.
 
 ## The one-line difference
 

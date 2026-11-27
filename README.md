@@ -140,6 +140,7 @@ Wardmap is meant to run **alongside** these tools, not replace them.
 |---|---|---|
 | [zizmor](https://github.com/zizmorcore/zizmor), poutine, octoscan | Workflow-file linting (injection, permissions, pinning) | Live secret scoping and cloud trust; reach graph; baseline gate. Run zizmor for workflow linting. |
 | [ActionScope](https://github.com/r12habh/ActionScope) | AWS blast radius of the roles a workflow *names* | Any role an attacker *can* assume (not just the named one), Azure + GCP, environments, branch protection, org secrets |
+| [gha-oidc-auditor](https://github.com/gamesapeca/gha-oidc-auditor) | OIDC workflow linting; least-privilege trust-policy generation and offline verification for AWS, Azure and GCP; Terraform output | Live secret, environment and branch-protection state; subjects an attacker can mint from new branches or auto-created environments; baseline gate; incident hunting |
 | TrustFix (`oidc-audit`), subcheck | AWS OIDC trust-policy misconfiguration checks; decoding a token's claims against a policy | Evaluates trust against every subject an attacker can mint (legacy and immutable formats), Azure and GCP, live GitHub state |
 | legitify | GitHub/GitLab org posture | The secret → workflow → cloud chain |
 | keyspan, aws-iam-trust-audit | Secret consumer graph / AWS trust JSON lint | Joined, live GitHub side, three clouds, incident hunting |
