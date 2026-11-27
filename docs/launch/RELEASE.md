@@ -51,6 +51,20 @@ After the release is published (about 2 minutes):
 - [ ] Publish the Action to the Marketplace from the **v1.0.1** release (docs/launch/marketplace.md).
 - [x] README Action snippet pinned to the v1.0.1 commit.
 
+## 3b. Cut v1.1.0 (immutable OIDC subjects, review-based branch protection; use this for launch)
+
+v1.0.1 can report a role as **not reachable** when its trust uses GitHub's immutable `repo:OWNER@ID/REPO@ID` subjects, and it trusts branch protection that needs no review. Launch on v1.1.0.
+
+1. Confirm `main` is green (ci, codeql, scorecard), then tag the current head of `main`:
+
+```bash
+git pull && git tag -a v1.1.0 origin/main -m "Wardmap v1.1.0" && git push origin v1.1.0
+```
+
+2. Check the release, then the packages and container runs, which start on their own (about 10 minutes).
+3. Repin the README and Marketplace Action snippets to the v1.1.0 commit (`git rev-list -n1 v1.1.0`). Tell the assistant the tag is pushed and it will make this commit.
+4. Publish the Marketplace listing from the **v1.1.0** release.
+
 ## 4. Launch day
 
 - [ ] Day before: send the pre-brief messages (docs/launch/prebrief.md).
