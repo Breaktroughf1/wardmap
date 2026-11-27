@@ -2,6 +2,7 @@
 
 [![ci](https://github.com/Breaktroughf1/wardmap/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Breaktroughf1/wardmap/actions/workflows/ci.yml)
 [![release](https://img.shields.io/github/v/release/Breaktroughf1/wardmap?sort=semver)](https://github.com/Breaktroughf1/wardmap/releases)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/Breaktroughf1/wardmap/badge)](https://scorecard.dev/viewer/?uri=github.com/Breaktroughf1/wardmap)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
 **Map what one compromised CI credential can reach.**
@@ -139,6 +140,7 @@ Wardmap is meant to run **alongside** these tools, not replace them.
 |---|---|---|
 | [zizmor](https://github.com/zizmorcore/zizmor), poutine, octoscan | Workflow-file linting (injection, permissions, pinning) | Live secret scoping and cloud trust; reach graph; baseline gate. Run zizmor for workflow linting. |
 | [ActionScope](https://github.com/r12habh/ActionScope) | AWS blast radius of the roles a workflow *names* | Any role an attacker *can* assume (not just the named one), Azure + GCP, environments, branch protection, org secrets |
+| TrustFix (`oidc-audit`), subcheck | AWS OIDC trust-policy misconfiguration checks; decoding a token's claims against a policy | Evaluates trust against every subject an attacker can mint (legacy and immutable formats), Azure and GCP, live GitHub state |
 | legitify | GitHub/GitLab org posture | The secret → workflow → cloud chain |
 | keyspan, aws-iam-trust-audit | Secret consumer graph / AWS trust JSON lint | Joined, live GitHub side, three clouds, incident hunting |
 | Kingfisher | Validating *leaked* keys | Exposure of secrets that have *not* leaked yet |
@@ -147,10 +149,12 @@ See [docs/positioning.md](docs/positioning.md) for detail.
 
 ## Documentation
 
+- [FAQ](docs/faq.md)
 - [Threat model and evaluation semantics](docs/threat-model.md)
 - [Rules](docs/rules.md)
 - [Token permissions](docs/permissions.md)
 - [IOC packs](docs/ioc-packs.md)
+- [Positioning against other tools](docs/positioning.md)
 - [Project plan](docs/PLAN.md)
 - [Release and launch checklist](docs/launch/RELEASE.md)
 

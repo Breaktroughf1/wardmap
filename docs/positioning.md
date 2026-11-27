@@ -1,6 +1,6 @@
 # Positioning
 
-Competitor facts below were checked on 26 Nov 2026. Re-check them before quoting in launch material.
+Competitor facts below were checked on 26–27 Nov 2026. Re-check them before quoting in launch material.
 
 ## The gap Wardmap fills
 
@@ -10,10 +10,17 @@ Each existing tool covers one slice. None of them answers *"which secrets and cl
 |---|---|---|---|---|---|---|---|---|---|
 | zizmor / poutine | ✔ | | partial | | | | | | |
 | ActionScope (MIT, Python, v0.5.0 Aug 2026) | | | partial | ✔ | | | named roles only | | |
+| TrustFix / oidc-audit | | | | ✔ (misconfig checks) | | | | | |
+| subcheck | | | | claims check of one token | | | | | |
+| gha-audit | ✔ | | | | | | | | |
 | legitify | | posture | ✔ | | | | | | |
 | keyspan | | local files | | | | | | | |
 | aws-iam-trust-audit | | | | ✔ (offline) | | | | | |
 | **Wardmap** | defers to zizmor | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ |
+
+## The one-line difference
+
+Trust-policy checkers ask *"is this policy written badly?"*. Wardmap asks *"given what a stolen write token can make GitHub sign, which of these policies say yes?"*. That is why Wardmap generates candidate subjects, in both the legacy and the immutable `repo:OWNER@ID/REPO@ID` formats, and evaluates every trust against them instead of pattern-matching policy text.
 
 ## What we deliberately do not do
 
