@@ -2,6 +2,8 @@
 
 ## v1.1.0 — 2026-11-27
 
+- Built with Go 1.27.4. Go 1.24.7, used before, has standard-library vulnerabilities (net/http, crypto/tls, crypto/x509, html/template) that govulncheck reports as reachable. CI now runs govulncheck on every change.
+
 ### Fixed: GitHub immutable OIDC subject claims (false negative)
 
 GitHub's default `sub` claim includes immutable IDs (`repo:OWNER@ID/REPO@ID:…`) for repositories created after 15 July 2026, for repositories renamed or transferred after that date, and for opted-in repositories. Earlier versions modelled only the name-based format, so they could report a role trusting the new format as **not reachable**. Wardmap now does the following:
